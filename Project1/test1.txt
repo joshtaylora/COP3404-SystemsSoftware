@@ -1,0 +1,7 @@
+#
+#
+# This is a comment
+#
+#
+COPY			START	1000
+		LDA	X
