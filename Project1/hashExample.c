@@ -145,13 +145,16 @@ int main(int argc, char **argv){
     ht_t *ht = ht_create();
 
     // set values in the hashtable
-    ht_set(ht, "Josh", "boyfriend");
-    ht_set(ht, "Kat", "girlfriend");
-    ht_set(ht, "Kerry", "bestfriend");
-    ht_set(ht, "Brandon", "bestfriend_boyfriend");
-    ht_set(ht, "Kim", "friend");
-    ht_set(ht, "Tyler", "friend");
-    ht_set(ht, "Elisha", "boyfriends_friend");
+    ht_set(ht, "COPY", "0x1000");
+    ht_set(ht, "FIRST", "0x1003");
+    ht_set(ht, "CLOOP", "0x1006");
+    ht_set(ht, "ENDFIL", "0x1009");
+    ht_set(ht, "EOF", "0x100C");
+    ht_set(ht, "THREE", "0x100F");
+    ht_set(ht, "ZERO", "0x1012");
+
+    char exHex[] = "0x100F";
+    printf("exHex: %s\n", exHex);
 
     ht_dump(ht);
     

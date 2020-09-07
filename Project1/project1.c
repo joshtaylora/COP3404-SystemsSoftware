@@ -2,62 +2,139 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define SYM_TABLE_SIZE 1024
+#define TABLE_SIZE 100000
 
-struct symbol_node{
-    int key;
-    int symbol;
-    struct symbol_node *next;
-};
+unsigned int hash(const char *key) {
+    unsigned long int value = 0;
+    unsigned int i = 0;
+    unsigned int key_len = strlen(key);
 
-struct symbol_table{
-    int size;
-    struct symbol_node **list;
-};
-
-struct symbol_table *createSymbolTable(int size) {
-    struct symbol_table *t = (struct symbol_table*)malloc(sizeof(struct symbol_table));
-    t->size = size;
-    t->list = (struct symbol_node**)malloc(sizeof(struct symbol_node*)*size);
-    // initialize the symbol table with all entries in the table empty (NULL)
-    for (int i=0; i < size; i ++) {
-        t->list[i] = NULL;
+    for (; i < key_len; i++) {
+        value = value *37 + key[i];
     }
-    return t;
+
+    value = value % TABLE_SIZE;
+
+    return value;
 }
 
-int hashFunction(struct symbol_table *t, int key) {
-    if (key < 0) { return -(key%t->size); }
-    return key%t->size;
+// creates a linked list of entries, each one with a pointer to the next one
+typedef struct entry_list {
+    char *key; // the key is the symbol name ( possible error = duplicate symbol definitions )
+    char *value; // the value is the location in memory
+    struct entry_list *next; // pointer to the next entry in the symbol table
+} entry_list;
+
+// the symbol table acts as an array of linked lists
+typedef struct {
+    entry_list **entries; // array of pointers to the linked lists of entries
+} symbol_table;
+
+symbol_table *st_create(void) {
+    // allocate memory for the table
+    symbol_table *hashtable = malloc(sizeof(symbol_table) * 1);
+
+    // allocate memory for the table entries
+    hashtable->entries = malloc(sizeof(entry_list*) *TABLE_SIZE);
+    
+    // when we create the symbol table, we want all of the entries to be set to null so we can 
+    // perform table lookup very easily
+    int i = 0;
+    for (; i < TABLE_SIZE; i++) {
+        hashtable->entries[i] = NULL;
+    }
+
+    return hashtable;
 }
 
-void insert(struct symbol_table *t, int key, int symbol) {
-    int position = hashFunction(t, key);
-    struct symbol_node *list = t->list[position];
-    struct symbol_node *newSymbol = (struct symbol_node*)malloc(sizeof(struct symbol_node));
-    struct symbol_node *temp = list;
-    while(temp) {
-        if (temp->key==key){
-            temp->symbol = symbol;
+entry_list *st_pair(const char *key, const char *value) {
+    // allocate the entry
+    entry_list *entry = malloc(sizeof(entry) * 1);
+    entry->key = malloc(strlen(key) + 1);
+    entry->value = malloc(strlen(value) + 1);
+
+    // copy the key and value in place
+    strcpy(entry->key, key);
+    strcpy(entry->value, value);
+
+    // next entry starts out null but can be set later on
+    entry->next = NULL;
+    
+    return entry;
+}
+
+void st_set(symbol_table *hashtable, const char *key, const char *value) {
+    // generate a hash using the key and create a bucket in case we have matching hashes
+    unsigned int bucket = hash(key);
+
+    entry_list *entry = hashtable->entries[bucket];
+
+    // if there is no entry at the hash, create a new bucket with 1 entry and no next entry yet
+    if (entry == NULL) {
+        hashtable->entries[bucket] = st_pair(key, value);
+        return;
+    }
+
+    entry_list *prev;
+
+    while (entry != NULL) {
+        // check key (if the keys match)
+        if (strcmp(entry->key, key) == 0) {
+            // match found, replace the value
+            free(entry->value);
+            entry->value = malloc(strlen(value) + 1);
+            strcpy(entry->value, value);
             return;
         }
-        temp = temp->next;
+        
+        // walk to next entry and update next values
+        prev = entry;
+        entry = prev->next;
     }
-    newSymbol->key = key;
-    newSymbol->symbol = symbol;
-    newSymbol->next = list;
-    t->list[position] = newSymbol;
+    
+    // end of the linked list reached without a match, add a new entry
+    prev->next = st_pair(key, value);
 }
 
-int lookup(struct symbol_table *t, int key) {
-    int position = hashFunction(t, key);
-    struct symbol_node *list = t->list[position];
-    struct symbol_node *temp = list;
-    while(temp) {
-        if (temp->key==key) { return temp->symbol; }
-        temp = temp->next;
+// function to get values ( memory locations ) given a key ( symbol name )
+char *st_get(symbol_table *hashtable, const char *key) {
+    unsigned int slot = hash(key);
+
+    // try to find a valid slot in the table using the hash for the given key
+    entry_list *entry = hashtable->entries[slot];
+
+    // no slot with that hash means the entry is not in the symbol table
+    if (entry == NULL) {
+        return NULL;
     }
-    return -1;
+
+    while (entry != NULL) {
+        // match found
+        if (strcmp(entry->key, key) == 0) {
+            return entry->value;
+        }
+        
+        // proceed to the next key (if possible) and try again
+        entry = entry->next;
+    }
+    // no matching entry found
+    return NULL;
+}
+
+void st_print(symbol_table *hashtable) {
+    for (int i = 0; i < TABLE_SIZE; i++) {
+        entry_list *entry = hashtable->entries[i];
+
+        if (entry == NULL) { continue; }
+        printf("slot[%4d]: ", i);
+
+        for (;;) {
+            printf("%s=%s ", entry->key, entry->value);
+            if (entry->next == NULL) { break; }
+            entry = entry->next;
+        }
+        printf("\n");
+    }
 }
 
 int main(int argc, char *argv[]) {
@@ -78,13 +155,12 @@ int main(int argc, char *argv[]) {
 	}
 
     // The Location Counter that tells where we are in memory 
-	int LocCounter;
+	char *locCounter;
 
     // initialize the symbol table
-    struct symbol_table *t = createSymbolTable(SYM_TABLE_SIZE);
-    insert(t, 16, 555);
-    insert(t, 20, 777);
-    printf("Symbol = %d\n", lookup(t,20));
+    symbol_table *symtab = st_create();
+    // use st_set(symtab, "SYMBOL", locCounter) to set new entries in the symbol table
+
 
     // Array of SIC Directives
     // START - specifies the name and starting address of program, routine, or library
