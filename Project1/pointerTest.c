@@ -27,6 +27,8 @@ int main() {
     char x[20] = "This is a test";
     char y[20];
     strcpyTest(y, x);
+
+    this is an illegal expression in C
     
     printf("After copy\n\tx: %s\n\ty: %s\n", x,y);
     return 0;

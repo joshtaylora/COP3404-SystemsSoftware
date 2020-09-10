@@ -2,8 +2,17 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define TABLE_SIZE 100000
+#define TABLE_SIZE 1000
 
+// possible idea is to make the hash table only length = 26
+// each entry represents a  
+struct symbol {
+    int address; // 
+    int SourceLineDefinition; // line of the input file the symbol is defined on
+    char name[8]; // name of the symbol max 6 chars and the 7th is the '0' null char
+} symbol;
+
+// The hash function
 unsigned int hash(const char *key) {
     unsigned long int value = 0;
     unsigned int i = 0;
@@ -30,6 +39,7 @@ typedef struct {
     entry_list **entries; // array of pointers to the linked lists of entries
 } symbol_table;
 
+// function that initializes the symbol table and allocates the required memory
 symbol_table *st_create(void) {
     // allocate memory for the table
     symbol_table *hashtable = malloc(sizeof(symbol_table) * 1);
@@ -161,7 +171,16 @@ int main(int argc, char *argv[]) {
     symbol_table *symtab = st_create();
     // use st_set(symtab, "SYMBOL", locCounter) to set new entries in the symbol table
 
-
+    int isDirective(char *possibleDirec) {
+        if (strcmp(possibleDirec, "START")) { return 1; }
+        if (strcmp(possibleDirec, "END")) { return 1; }
+        if (strcmp(possibleDirec, "BYTE")) { return 1; }
+        if (strcmp(possibleDirec, "WORD")) { return 1; }
+        if (strcmp(possibleDirec, "RESB")) { return 1; }
+        if (strcmp(possibleDirec, "RESW")) { return 1; }
+        if (strcmp(possibleDirec, "RESR")) { return 1; }
+        if (strcmp(possibleDirec, "EXPORTS")) { return 1; }
+    }
     // Array of SIC Directives
     // START - specifies the name and starting address of program, routine, or library
     // END - Indicates the end of the program and (optionally) specifies the first executable 
