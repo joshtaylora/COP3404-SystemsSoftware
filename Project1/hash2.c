@@ -11,9 +11,15 @@ int hashFunction(char *symbol) {
     return symbolLength;     
 }
 
+struct symbol_list {
+    char index; 
+    
+
+}
+symbol_list[] symbol_table;
 
 int main(int argc, char **argv) {
-    
+    symbol_list[] symbol_table;
 
     return 0;
 }
