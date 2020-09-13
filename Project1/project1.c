@@ -2,9 +2,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define TABLE_SIZE 1000
+#define TABLE_SIZE 100000
 
-// The hash function
 unsigned int hash(const char *key) {
     unsigned long int value = 0;
     unsigned int i = 0;
@@ -31,7 +30,6 @@ typedef struct {
     entry_list **entries; // array of pointers to the linked lists of entries
 } symbol_table;
 
-// function that initializes the symbol table and allocates the required memory
 symbol_table *st_create(void) {
     // allocate memory for the table
     symbol_table *hashtable = malloc(sizeof(symbol_table) * 1);
@@ -139,29 +137,6 @@ void st_print(symbol_table *hashtable) {
     }
 }
 
-
-int isDirective(char *possibleDirec) {
-    // START - specifies the name and starting address of program, routine, or library
-    if (strcmp(possibleDirec, "START")) { return 1; }
-    // END - Indicates the end of the program and (optionally) specifies the first executable 
-    //      instruction on the program
-    if (strcmp(possibleDirec, "END")) { return 1; }
-    // BYTE - Generate character or hexadecimal constant, occupying as many bytes as needed to represent
-    //      the constant
-    if (strcmp(possibleDirec, "BYTE")) { return 1; }
-    // WORD - generate a one-word integer constant (words in SIC are 3 bytes)
-    if (strcmp(possibleDirec, "WORD")) { return 1; }
-    // RESB - reserve the indicated number of bytes for a data area
-    if (strcmp(possibleDirec, "RESB")) { return 1; }
-    // RESW - reserve the indicated number of words for a data area
-    if (strcmp(possibleDirec, "RESW")) { return 1; }
-    // RESR - reserve space for an external reference address or lubrary location. 3 Bytes
-    if (strcmp(possibleDirec, "RESR")) { return 1; }
-    // EXPORTS - export the symbol address in the object file for cross-file linking. 3 Bytes
-    if (strcmp(possibleDirec, "EXPORTS")) { return 1; }
-    return 0; // The directive check failed
-}
-
 int main(int argc, char *argv[]) {
 	// check to see that a file was passed 
 	if ( argc != 2) {
@@ -187,6 +162,28 @@ int main(int argc, char *argv[]) {
     // use st_set(symtab, "SYMBOL", locCounter) to set new entries in the symbol table
 
 
+    // Array of SIC Directives
+    // START - specifies the name and starting address of program, routine, or library
+    // END - Indicates the end of the program and (optionally) specifies the first executable 
+    //      instruction on the program
+    // BYTE - Generate character or hexadecimal constant, occupying as many bytes as needed to represent
+    //      the constant
+    // WORD - generate a one-word integer constant (words in SIC are 3 bytes)
+    // RESB - reserve the indicated number of bytes for a data area
+    // RESW - reserve the indicated number of words for a data area
+    // RESR - reserve space for an external reference address or lubrary location. 3 Bytes
+    // EXPORTS - export the symbol address in the object file for cross-file linking. 3 Bytes
+    char directives[8][15] =
+    { "START",
+        "END",
+        "BYTE",
+        "WORD",
+        "RESB",
+        "RESW",
+        "RESR",
+        "EXPORTS"
+    };
+
 	//read the file, line by line
 	char line[1024];
 	// fgets returns a null pointer if the EOF char is read
@@ -200,39 +197,20 @@ int main(int argc, char *argv[]) {
 				printf("--was a comment\n");
 			}
 
-            else {
-                // Tokenize the line
-                char *token = strtok( line, " \t");
-                while ( token ){
-                    printf("\t----> %s\n", token);
-                    token = strtok( NULL, " \t");
+			// check for a symbol definition: must be an alpha character (ASCII 65 through 90 )
+			if ( ( line[0] >= 65 ) && ( line[0] <= 90 ) ) {
+				printf("--had a symbol definition\n");
+			}
 
-                    // check for a symbol definition: must be an alpha character (ASCII 65 through 90 )
-                    if ( ( line[0] >= 65 ) && ( line[0] <= 90 ) ) {
-                        printf("--had a symbol definition\n");
-                        if (st_get(symtab, token) != NULL) {
-                            printf("ERROR: duplicate symbol %s already defined\n", token);
-                            return 1;
-                        }
-                        // store the symbol in the symbol table 
-                        else {
-                            st_set(symtab, token, locCounter);
-                        }
-                    }
+			// Tokenize the line
+			char *token = strtok( line, " \t");
+            if ( ( line[0] >= 65 ) && ( line[0] <= 90 ) ) {
 
-                    // advance to the next token in the line
-                    token = strtok( NULL, " \t");
-                    if (isDirective(token) == 1) {
-                        printf("--directive line, directive is: %s\n", token);
-                    }
-                    else {
-                        printf("--instruction line, opcode is: %s\n", token);
-                    }
-                    token = strtok( NULL, " \t");
-                    printf("--operand: %s\n", token);
-                }
             }
-
+			while ( token ){
+				printf("\t----> %s\n", token);
+				token = strtok( NULL, " \t");
+			}
 		}
 	}
 

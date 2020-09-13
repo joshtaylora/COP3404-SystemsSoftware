@@ -31,7 +31,7 @@ SymbolTable *ST_create( void ) {
     return hashtable;
 }
 
-Symbol *Symbol_alloc( const char *name, int *address, int *sourceline ) {
+Symbol *Symbol_alloc(  char *name, int *address, int *sourceline ) {
     Symbol *entry = malloc( sizeof( entry ) * 1 ); // allocate memory for the symbol table entry
     entry->Name = malloc( strlen( name ) + 1 ); // allocate memory for the symbol name = size of the char array + 1
     entry->Address = malloc( sizeof(int) ); // allocate memory for the address = size of an int
@@ -75,7 +75,7 @@ void ST_set( SymbolTable *hashtable, char *name, int *address, int *sourceline) 
     }
 }
 
-Symbol *ST_get(SymbolTable *hashtable, char *name) {
+Symbol *ST_get(SymbolTable *hashtable, char *name, int *address, int *sourceline) {
     unsigned int tableIndex = name[0] - 65;
 
     Symbol *entry = hashtable->TableEntries[tableIndex];
@@ -149,64 +149,94 @@ int main(char argc, char *argv[]) {
 
     // The Location Counter that tells where we are in memory 
 	int *loc_counter;
-
-    int *line_number; 
+    // specifies the line that a symbol is defined on
+    int line_number = 0; 
 
     // initialize the symbol table
     SymbolTable *symbol_table = ST_create();
-    // use st_set(symtab, "SYMBOL", loc_counter) to set new entries in the symbol table
+    printf("SYMBOL TABLE CREATED\n");
+    // use st_set(symbol_table, "SYMBOL", loc_counter) to set new entries in the symbol table
 
 
 	//read the file, line by line
-	char line[1024];
-	// fgets returns a null pointer if the EOF char is read
-	while( fgets(line, 1024, inputFile) ){
-		printf("READ: %s", line );
-		int length;
+	char fileArg[1024];
+
+	int length;
+	
+    // fgets returns a null pointer if the EOF char is read
+	while( fgets(fileArg, 1024, inputFile) ){
+        // initialize the line number counter to 1 to indicate we are on the first line
+        line_number++;
+
+        // splits the file into lines tokenized using the new line character
+        char *line = strtok(fileArg, "\n");
+		
+        printf("READ: %s\n", line );
+
 		length = strlen( line );
-		if ( length > 0 ) {
+		 
+        if ( length > 0 ) {
 			// check for comment ( 35 = character value for ascii value for # symbol )
 			if (line[0] == 35 ) {
 				printf("--was a comment\n");
 			}
 
             else {
-                // Tokenize the line
-                char *token = strtok( line, " \t");
-                while ( token ){
-                    printf("\t----> %s\n", token);
-                    token = strtok( NULL, " \t");
+                // splits the line into tokens separated by spaces or tabs
+                char *token = strtok(line, " \t");
 
+                // while there are still tokens on the line
+                while ( token ){
                     // check for a symbol definition: must be an alpha character (ASCII 65 through 90 )
                     if ( ( line[0] >= 65 ) && ( line[0] <= 90 ) ) {
-                        printf("--had a symbol definition\n");
-                        if (ST_get(symbol_table, token) != NULL) {
-                            printf("ERROR: duplicate symbol %s already defined\n", token);
+                        char *sym = token;
+                        // if the symbol already exists in the symbol table, we need to throw an error
+                        Symbol *duplicate = ST_get(symbol_table, sym, loc_counter, &line_number);
+                        if (duplicate != NULL) {
+                            
+                            printf("ERROR: duplicate symbol %s already defined on line%d (current line = %d)\n", 
+                                    duplicate->Name, *(duplicate->SourceLineNumber), line_number);
                             return 1;
                         }
-                        // store the symbol in the symbol table 
-                        else {
-                            ST_set(symbol_table, token, loc_counter, line_number);
-                        }
-                    }
 
-                    // advance to the next token in the line
-                    token = strtok( NULL, " \t");
+                        // store the symbol in the symbol table 
+                        ST_set(symbol_table, sym, loc_counter, &line_number);
+                        printf("symbol: %s\n", sym);
+                        char *opcode = strtok(NULL, " \t");
+                        if (opcode != NULL) {
+                            if (isDirective(opcode) == 1) {
+                                printf("\tdirective: %s\n", opcode);
+                            }
+                            else {
+                                printf("\topcode: %s\n", opcode);
+                            }
+                        }
+                        char *operand = strtok(NULL, " \t");
+                        printf("\t\toperand: %s\n", operand);
+                        token = strtok( NULL, " \t");
+                        continue;
+                    }
+                    /*
                     if (isDirective(token) == 1) {
                         printf("--directive line, directive is: %s\n", token);
                     }
                     else {
                         printf("--instruction line, opcode is: %s\n", token);
                     }
+                    */
                     token = strtok( NULL, " \t");
-                    printf("--operand: %s\n", token);
                 }
             }
 
 		}
+
+        line = strtok(NULL, "\n");
 	}
 
 	// close the opened file
 	fclose( inputFile );
+    return 0;
     
 }
+
+
