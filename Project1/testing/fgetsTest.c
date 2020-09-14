@@ -7,12 +7,10 @@ int main(int argc, char **argv) {
     FILE *inputFile;
     inputFile = fopen( argv[1], "r" );
 
-    char fileArg[1024];
+    char line[1024];
     int current_line = 0;
 
-    while( fgets(fileArg, 1024, inputFile) ) {
-        // splits the file into lines
-        char *line = strtok(fileArg, "\n");
+    while( fgets(line, 1024, inputFile) ) {
 
         current_line++;
         printf("CURRENT LINE: %d\n", current_line);
@@ -21,40 +19,58 @@ int main(int argc, char **argv) {
             printf("line[%d], char[%d] = %c\n",current_line, i, line[i]);
         }
 
+        
+        // check for a comment
+        if (line[0] == 35) {
+            printf("----COMMENT \n");
+            continue;
+        }
+
+
         // splits the line into characters
         // while there are still tokens
-        while(line) {
-            char *tab1 = strtok(line, " \t");
-            char *tab2 = strtok(NULL, " \t");
-            char *tab3 = strtok(NULL, " \t");
-            char *tab4 = strtok(NULL, " \t");
+        char *token = strtok(line, " \t");
+        while(token) {
             int loc_counter;
-            // check for a comment
-            if (tab1[0] == 35) {
-                printf("----COMMENT \n");
-                line = strtok(NULL, "\n");
-                continue;
-            }
-            else if (tab1[0] >= 65 && tab1[0] <= 96) {
-                if (strcmp(tab2, "START") == 0) {
+            // check for a symbol definition
+            if (token[0] >= 65 && token[0] <= 96) {
+                char *symbol = token;
+                token = strtok(NULL, " \t");
+                if (strcmp(token, "START") == 0) {
+                    char *opcode = token;
+                    token = strtok(NULL, " \t");
+                    char *address = token;
                     char hex[15] = "0x";
-                    strcat(hex, tab3);
-                    const char *hexstring = hex;
-                    printf("---hex: %s\n", hexstring);
-                    loc_counter = (int)strtol(hexstring, NULL, 0);
-                    printf("\tLocation Counter: %d", loc_counter);
+                    strcat(hex, address);
+                    int hexint = atoi(hex);
+                    loc_counter = (int)strtol(hex, NULL, 16);
+                    printf("symbol: %s, opcode: %s, address: %d\n", symbol, opcode, loc_counter);
+
                 }
                 else {
                     loc_counter += 3;
                 }
-                printf("\tsymbol: %s, opcode: %s, address: %d\n", tab1, tab2, loc_counter);
             }
             else {
-                printf("%s\t%s\t%s\t%s\t", tab1, tab2, tab3, tab4);
+                char *opcode = token;
+                if (strcmp(token, "WORD") == 0) {
+                    token = strtok(NULL, " \t");
+                    char *operand = token;
+                    loc_counter += 3;
+                    printf("\t opcode: %s, address: %d\n", opcode, loc_counter);
+                }
+                else {
+                    token = strtok(NULL, " \t");
+                    char *operand = token;
+                    loc_counter += 3;
+                    printf("\t opcode: %s, address: %d\n", opcode, loc_counter);
+                }
             }
-            printf("\tNew Line\n");
-            line = strtok(NULL, "\n");
+            token = strtok(NULL, " \n");
         }
+        
+        printf("\tNew Line\n");
+
     }
     return 0;
 }
