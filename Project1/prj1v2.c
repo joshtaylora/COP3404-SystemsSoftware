@@ -107,30 +107,30 @@ void ST_print( SymbolTable *hashtable ){
 }
 
 int isDirective(char *possibleDirec) {
+    /* Checking for START is reduntant because we must first check for it in the program before any other directive
     // START - specifies the name and starting address of program, routine, or library
     if (strcmp(possibleDirec, "START")) { return 1; }
+    */
     // END - Indicates the end of the program and (optionally) specifies the first executable 
     //      instruction on the program
-    if (strcmp(possibleDirec, "END")) { return 1; }
+    if (strcmp(possibleDirec, "END") == 0) { return 1; }
     // BYTE - Generate character or hexadecimal constant, occupying as many bytes as needed to represent
     //      the constant
-    if (strcmp(possibleDirec, "BYTE")) { return 1; }
+    if (strcmp(possibleDirec, "BYTE") == 0 ) { return 1; }
     // WORD - generate a one-word integer constant (words in SIC are 3 bytes)
-    if (strcmp(possibleDirec, "WORD")) { return 1; }
+    if (strcmp(possibleDirec, "WORD") == 0) { return 1; }
     // RESB - reserve the indicated number of bytes for a data area
-    if (strcmp(possibleDirec, "RESB")) { return 1; }
+    if (strcmp(possibleDirec, "RESB") == 0) { return 1; }
     // RESW - reserve the indicated number of words for a data area
-    if (strcmp(possibleDirec, "RESW")) { return 1; }
+    if (strcmp(possibleDirec, "RESW") == 0) { return 1; }
     // RESR - reserve space for an external reference address or lubrary location. 3 Bytes
-    if (strcmp(possibleDirec, "RESR")) { return 1; }
+    if (strcmp(possibleDirec, "RESR") == 0) { return 1; }
     // EXPORTS - export the symbol address in the object file for cross-file linking. 3 Bytes
-    if (strcmp(possibleDirec, "EXPORTS")) { return 1; }
+    if (strcmp(possibleDirec, "EXPORTS") == 0) { return 1; }
     return 0; // The directive check failed
 }
 
 int main(char argc, char *argv[]) {
-    
-    Symbol* hashtable[26];
     
     // check if a file was passed
     if( argc != 2 ) {
@@ -148,9 +148,9 @@ int main(char argc, char *argv[]) {
 	}
 
     // The Location Counter that tells where we are in memory 
-	int *loc_counter;
+	int loc_counter;
     // specifies the line that a symbol is defined on
-    int line_number = 0; 
+    int line_number = 1; 
 
     // initialize the symbol table
     SymbolTable *symbol_table = ST_create();
@@ -159,78 +159,99 @@ int main(char argc, char *argv[]) {
 
 
 	//read the file, line by line
-	char fileArg[1024];
+	char line[1024];
 
 	int length;
+    // counter that checks if we have encountered the START directive yet
+    int startCheck = 0;
 	
     // fgets returns a null pointer if the EOF char is read
-	while( fgets(fileArg, 1024, inputFile) ){
-        // initialize the line number counter to 1 to indicate we are on the first line
-        line_number++;
-
-        // splits the file into lines tokenized using the new line character
-        char *line = strtok(fileArg, "\n");
-		
-        printf("READ: %s\n", line );
-
+	while( fgets(line, 1024, inputFile) ){
+        printf("LINE: %s\n", line);
+        
 		length = strlen( line );
 		 
-        if ( length > 0 ) {
-			// check for comment ( 35 = character value for ascii value for # symbol )
-			if (line[0] == 35 ) {
-				printf("--was a comment\n");
-			}
-
-            else {
-                // splits the line into tokens separated by spaces or tabs
-                char *token = strtok(line, " \t");
-
-                // while there are still tokens on the line
-                while ( token ){
-                    // check for a symbol definition: must be an alpha character (ASCII 65 through 90 )
-                    if ( ( line[0] >= 65 ) && ( line[0] <= 90 ) ) {
-                        char *sym = token;
-                        // if the symbol already exists in the symbol table, we need to throw an error
-                        Symbol *duplicate = ST_get(symbol_table, sym, loc_counter, &line_number);
-                        if (duplicate != NULL) {
-                            
-                            printf("ERROR: duplicate symbol %s already defined on line%d (current line = %d)\n", 
-                                    duplicate->Name, *(duplicate->SourceLineNumber), line_number);
-                            return 1;
-                        }
-
-                        // store the symbol in the symbol table 
-                        ST_set(symbol_table, sym, loc_counter, &line_number);
-                        printf("symbol: %s\n", sym);
-                        char *opcode = strtok(NULL, " \t");
-                        if (opcode != NULL) {
-                            if (isDirective(opcode) == 1) {
-                                printf("\tdirective: %s\n", opcode);
-                            }
-                            else {
-                                printf("\topcode: %s\n", opcode);
-                            }
-                        }
-                        char *operand = strtok(NULL, " \t");
-                        printf("\t\toperand: %s\n", operand);
-                        token = strtok( NULL, " \t");
-                        continue;
-                    }
-                    /*
-                    if (isDirective(token) == 1) {
-                        printf("--directive line, directive is: %s\n", token);
-                    }
-                    else {
-                        printf("--instruction line, opcode is: %s\n", token);
-                    }
-                    */
-                    token = strtok( NULL, " \t");
-                }
-            }
-
+		// check for comment ( 35 = character value for ascii value for # symbol )
+		if (line[0] == 35 ) {
+			printf("--was a comment\n");
+            continue;
 		}
 
-        line = strtok(NULL, "\n");
+        else {
+            // splits the line into tokens separated by spaces or tabs
+            char *token = strtok(line, " \t");
+
+            // while there are still tokens on the line
+            while ( token ){
+                // check for a symbol definition: must be an alpha character (ASCII 65 through 90 )
+                if ( ( line[0] >= 65 ) && ( line[0] <= 90 ) ) {
+                    char *sym = token;
+                    // if the symbol already exists in the symbol table, we need to throw an error
+                    Symbol *duplicate = ST_get(symbol_table, sym, &loc_counter, &line_number);
+                    if (duplicate != NULL) {
+                        
+                        printf("ERROR: duplicate symbol %s already defined on line%d (current line = %d)\n", 
+                                duplicate->Name, *(duplicate->SourceLineNumber), line_number);
+                        return 1;
+                    }
+
+                    // store the symbol in the symbol table 
+                    ST_set(symbol_table, sym, &loc_counter, &line_number);
+                    // increment the token to a possible directive/opcode
+                    token =  strtok(NULL, " \t");
+                    char *opcode = token;
+                    // check for the start directive
+                    if (strcmp(opcode, "START") == 0) {
+                        // increment counter to indicate the start directive has been found
+                        startCheck = 1;
+                        // increment to the next token to check the starting address
+                        token = strtok(NULL, " \t");
+                        char *addr = token;
+                        // the next 2 lines add the 0X characters to the address token to make the conversion to a hex int easier
+                        char hex[15] = "0X";
+                        strcat(hex, addr);
+                        // makes loc_counter = hex int value of the address specified by the start directive
+                        loc_counter = (int)strtol(hex, NULL, 0);
+                        printf("symbol: %s\topcode: %s\taddress: %X\n",
+                                sym, opcode, loc_counter);
+                    }
+                    else if (startCheck == 1 && isDirective(opcode) == 1) {
+                        printf("\tdirective: %s\n", opcode);
+                    }
+                    else {
+                        printf("\topcode: %s\n", opcode);
+                    }
+
+                }
+                // if we have already encountered the START directive and the directive/opcode token IS a directive
+                else if (startCheck == 1 && isDirective(token) == 1) {
+                    char *directive = token;
+                    printf("\tdirective: %s, loc_counter: %X", directive, loc_counter);
+                    token = strtok(NULL, " \t");
+                    char *operand = token;
+                    printf("\toperand: %s\n", operand);
+                    
+                }
+                // if the directive/opcode token is NOT a directive, increment the location counter by 3 bytes
+                else if (startCheck == 1 && isDirective(token) == 0) {
+                    printf("---not a directive\n");
+                    token = strtok(NULL, " \t");
+                    char *operand = token;
+                    printf("opcode: %s, loc_counter: %X\n", token, loc_counter);
+                    // increment location counter for the next line
+                    loc_counter += 3;
+
+                }
+                else {
+                    printf("ERROR: not a directive or instruction on line: %d", line_number);
+                }
+                token = strtok(NULL, " \t");
+
+            }
+        }
+
+        // increment the line counter
+        line_number++;
 	}
 
 	// close the opened file
