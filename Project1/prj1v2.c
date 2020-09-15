@@ -137,19 +137,33 @@ int isOpcode(char *possibleOpcode) {
 int calcDirective(char *directive, char *operand, int *loc_counter) {
     if (strcmp(directive, "WORD") == 0) {
         // write 
+        return 1;
     }
     if (strcmp(directive, "RESB") == 0) {
-        
+        return 1;
     }
     if (strcmp(directive, "RESW") == 0) {
-        
+        return 1;
     }
     if (strcmp(directive, "RESR") == 0) {
-        
+        return 1;
     }
     if (strcmp(directive, "BYTE") == 0) {
+        // BYTE C'character_sequence'
+        if (operand[0] == 67) {
+            char *opChar = strtok(operand, "\'");
+            opChar = strtok(NULL, "\'");
+            int charLength = strlen(opChar);
+
+            printf("---opChar:%s, length: %d\n", opChar, charLength);
+            return *loc_counter + charLength;
+        }
+        else if (operand[0] == 88) {
+            int hexLength = strlen(operand) - 3;
+        }
         
     }
+    return 0;
 }
 
 int main(char argc, char *argv[]) {
@@ -236,6 +250,10 @@ int main(char argc, char *argv[]) {
                         printf("symbol: %s\topcode: %s\taddress: %X\n",
                                 sym, opcode, loc_counter);
                     }
+                    // if the start directive has not yet been encountered throw an error
+                    else if (startCheck == 0) {
+                        printf("ERROR: START directive not encountered before first directive/instruction on line[%d]\n", line_number);
+                    }
                     else if (startCheck == 1 && isDirective(opcode) == 1) {
                         printf("\tdirective: %s\n", opcode);
                     }
@@ -247,10 +265,11 @@ int main(char argc, char *argv[]) {
                 // if we have already encountered the START directive and the directive/opcode token IS a directive
                 else if (startCheck == 1 && isDirective(token) == 1) {
                     char *directive = token;
-                    printf("\tdirective: %s, loc_counter: %X", directive, loc_counter);
+                    printf("\tdirective: %s, loc_counter: %X\n", directive, loc_counter);
                     token = strtok(NULL, " \t");
                     char *operand = token;
-                    printf("\toperand: %s\n", operand);
+                    int newLoc = calcDirective(directive, operand, &loc_counter);
+                    token = strtok(NULL, " \t");
                     
                 }
                 // if the directive/opcode token is NOT a directive, increment the location counter by 3 bytes
