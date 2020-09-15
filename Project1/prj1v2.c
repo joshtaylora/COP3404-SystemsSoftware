@@ -166,10 +166,8 @@ int main(char argc, char *argv[]) {
     int startCheck = 0;
 	
     // fgets returns a null pointer if the EOF char is read
-	while( fgets(line, 1024, inputFile) ){
+	while(fgets(line, 1024, inputFile)){
         printf("LINE: %s\n", line);
-        
-		length = strlen( line );
 		 
 		// check for comment ( 35 = character value for ascii value for # symbol )
 		if (line[0] == 35 ) {
@@ -235,15 +233,17 @@ int main(char argc, char *argv[]) {
                 // if the directive/opcode token is NOT a directive, increment the location counter by 3 bytes
                 else if (startCheck == 1 && isDirective(token) == 0) {
                     printf("---not a directive\n");
+                    char *opcode = token;
                     token = strtok(NULL, " \t");
                     char *operand = token;
-                    printf("opcode: %s, loc_counter: %X\n", token, loc_counter);
+                    printf("opcode: %s\t operand: %s\tloc_counter: %X\n", opcode, operand, loc_counter);
                     // increment location counter for the next line
                     loc_counter += 3;
 
                 }
                 else {
                     printf("ERROR: not a directive or instruction on line: %d", line_number);
+                    return 1;
                 }
                 token = strtok(NULL, " \t");
 
