@@ -1,0 +1,2 @@
+HELL    START   1000
+        BYTE    C'HELLO'
