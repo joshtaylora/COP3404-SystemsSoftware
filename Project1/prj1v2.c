@@ -130,6 +130,28 @@ int isDirective(char *possibleDirec) {
     return 0; // The directive check failed
 }
 
+int isOpcode(char *possibleOpcode) {
+    // validate the opcodes
+}
+// function to calculate the new loc_counter address
+int calcDirective(char *directive, char *operand, int *loc_counter) {
+    if (strcmp(directive, "WORD") == 0) {
+        // write 
+    }
+    if (strcmp(directive, "RESB") == 0) {
+        
+    }
+    if (strcmp(directive, "RESW") == 0) {
+        
+    }
+    if (strcmp(directive, "RESR") == 0) {
+        
+    }
+    if (strcmp(directive, "BYTE") == 0) {
+        
+    }
+}
+
 int main(char argc, char *argv[]) {
     
     // check if a file was passed
@@ -167,11 +189,12 @@ int main(char argc, char *argv[]) {
 	
     // fgets returns a null pointer if the EOF char is read
 	while(fgets(line, 1024, inputFile)){
-        printf("LINE: %s\n", line);
+        printf("LINE[%d]: %s\n",line_number, line);
 		 
 		// check for comment ( 35 = character value for ascii value for # symbol )
 		if (line[0] == 35 ) {
 			printf("--was a comment\n");
+            line_number++;
             continue;
 		}
 
