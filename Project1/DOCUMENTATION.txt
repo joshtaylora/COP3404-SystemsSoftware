@@ -1,0 +1,10 @@
+NAMING CONVENTIONS
+- typedef and structs use upper camel case 
+    - ex: SymbolTable, Symbol
+- methods involving the creation, management, and searching of a SymbolTable object have 'ST_' 
+    before a verb describing what the method does in upper camel case (if more than 1 word)
+    - ex: ST_Get, ST_Alloc
+- local variables use lower camel case
+    - ex: locCounter, lineNumber, address
+
+

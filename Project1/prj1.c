@@ -4,133 +4,107 @@
 
 #define TABLE_SIZE 26
 
-// structure for creating a symbol
-typedef struct Symbol 
-{
-    int Address;
-    int SourceLineNumber;
-    struct Symbol *Next; // pointer to the next symbol in the linked list
+typedef struct Symbol {
+    int *Address;
+    int *SourceLineNumber;
+    struct Symbol *next; // pointer to the next symbol in the linked list
     char *Name; // character array to store name of symbol
 } Symbol;
 
-// structure for implementing a symbol table to store symbols
-typedef struct SymbolTable 
-{
-    Symbol **symbolEntries; // points to an array of Symbol pointers
+typedef struct SymbolTable {
+    Symbol **TableEntries; // pointer to Symbol pointers (acts as an array of pointers)
 } SymbolTable;
 
-// returns a pointer to the location in memory where the symbol table is stored
-SymbolTable *ST_Create(void) 
-{
-    // alloc memory for the symbol table large enough to hold it
-    SymbolTable *symbolTable = malloc(sizeof(SymbolTable) * 1);
-    // alloc memory for the symbols that will be in the table
-    symbolTable->symbolEntries = malloc(sizeof(Symbol*) * TABLE_SIZE);
-    // set each symbol entry in the table to null so we can easily insert new entries without
-    // collisions
-    int i;
-    for (i = 0; i < TABLE_SIZE; i++)
-    {
-        symbolTable->symbolEntries[i] = NULL;
+SymbolTable *ST_create( void ) {
+    // allocate memory for a symbol table and set entries to point to the first available address in memory
+    SymbolTable *hashtable = malloc( sizeof( SymbolTable ) * 1 );
+
+    // allocate memory for a pointer to each symbol in the TableEntries array of pointers to symbols
+    hashtable->TableEntries = malloc( sizeof( Symbol* ) * TABLE_SIZE );
+
+    // set each entry in the table to null so that we can search for empty indeces in the table to insert
+    int i = 0;
+    for (; i < TABLE_SIZE; i++) {
+        hashtable->TableEntries[i] = NULL;
     }
-    return symbolTable;
+
+    return hashtable;
 }
 
-// returns a pointer to the location in memory where a new symbol has been allocated memory
-Symbol *Symbol_Alloc(char *name, int address, int sourceLine)
-{
-    // alloc enough memory for the new ST entry
-    Symbol *entry = malloc(sizeof(entry) * 1);
+Symbol *Symbol_alloc(  char *name, int *address, int *sourceline ) {
+    Symbol *entry = malloc( sizeof( entry ) * 1 ); // allocate memory for the symbol table entry
+    entry->Name = malloc( strlen( name ) + 1 ); // allocate memory for the symbol name = size of the char array + 1
+    entry->Address = malloc( sizeof(int) ); // allocate memory for the address = size of an int
+    entry->SourceLineNumber = malloc( sizeof(int) ); // allocate memory for the source line number = size of an int
     
-    // we add 1 to the length of the char array name for the null character '0'
-    // alloc memory for the char array we store in name
-    entry->Name = malloc(strlen(name) + 1);
-    
-    // copy the char array passed as name into the Name field of the symbol in place
+    // copy the name in place
     strcpy(entry->Name, name);
-    
-    // set the symbol's Address field
     entry->Address = address;
-    
-    // set the symbol's source line number
-    entry->SourceLineNumber = sourceLine;
-    
-    // set the symbol's pointer to the next element = NULL since its the first element in the linked list for the array corresponding to that symbol's first char in Name
-    entry->Next = NULL;
+    entry->SourceLineNumber = sourceline;
+
+    entry->next = NULL;
 
     return entry;
 }
 
-void ST_Set(SymbolTable *symbolTable, char *name, int address, int sourceLine)
-{
+void ST_set( SymbolTable *hashtable, char *name, int *address, int *sourceline) {
     unsigned int tableIndex = name[0] - 65;
-    Symbol *entry = symbolTable->symbolEntries[tableIndex];
-    
-    // if the entry at the index we want to set the item in is NULL, we can insert the symbol
-    // immediately
-    if (entry == NULL)
-    {
-        symbolTable->symbolEntries[tableIndex] = Symbol_Alloc(name, address, sourceLine);
+    // summary
+    Symbol *entry = hashtable->TableEntries[tableIndex];
+
+    // if there is not already an entry in the symbol table for the first letter of the symbol name,
+    // create a new entry
+    if ( entry == NULL ) {
+        hashtable->TableEntries[tableIndex] = Symbol_alloc(name, address, sourceline);
         return;
     }
-    // create a Symbol object called prev to store the current entry we are checking before moving to the next one
-    Symbol *prev;
 
-    while (entry != NULL)
-    {
-        if (strcmp(entry->Name, name) == 0)
-        {
-            free(entry->Name);
-            entry->Name = malloc(strlen(name) + 1);
-            strcpy(entry->Name, name);
+    Symbol *prev;
+    
+    while ( entry != NULL ){
+        // check if the symbol name matches the name of a symbol in the first position of the linked list for that letter
+        if ( strcmp( entry->Name, name ) == 0 ) {
+            free( entry->Name );
+            entry->Name = malloc( strlen( name ) + 1 );
+            strcpy( entry->Name, name );
             return;
         }
+        // walk to the next entry and update the next pointer
         prev = entry;
-        entry = prev->Next;
+        entry = prev->next;
     }
 }
 
-Symbol *ST_Get(SymbolTable *symbolTable, char *name, int address, int sourceline)
-{
+Symbol *ST_get(SymbolTable *hashtable, char *name, int *address, int *sourceline) {
     unsigned int tableIndex = name[0] - 65;
 
-    Symbol *entry = symbolTable->symbolEntries[tableIndex];
-    // if there is no symbol in the index indicated by the first letter of the symbol name
-    if (entry == NULL)
-    {
-        // then the entry is not in the table
+    Symbol *entry = hashtable->TableEntries[tableIndex];
+
+    if ( entry == NULL ) {
         return NULL;
     }
-    // while we have not found the corresesponding symbol in the table
-    while (entry != NULL)
-    {
-        if (strcmp(entry->Name, name) == 0)
-        {
-            return entry; // we have found the matching symbol in the table
+
+    while ( entry != NULL ) {
+        if ( strcmp( entry->Name, name ) == 0 ) {
+            return entry;
         }
-        entry = entry->Next;
+        // move to the next entry to check
+        entry = entry->next;
     }
-    // no matching symbol in the table was found
+    // no matching entry found
     return NULL;
 }
 
-void ST_Print(SymbolTable *symbolTable)
-{
-    for(int i = 0; i < TABLE_SIZE; i++)
-    {
-        Symbol *entry = symbolTable->symbolEntries[i];
-        int address = entry->Address;
-        int source = entry->SourceLineNumber;
-        if (entry == NULL)
-        {
-            continue;
-        }
+void ST_print( SymbolTable *hashtable ){
+    for( int i = 0; i < TABLE_SIZE; i++ ) {
+        Symbol *entry = hashtable->TableEntries[i];
+        int address = *(entry->Address);
+        if ( entry == NULL ) { continue; }
         for (;;) {
-            printf("symbol:%s\tadddress: %d\tsource line: %d\n", entry->Name, address, source);
+            printf("%s %d\n", entry->Name, address );
         }
     }
 }
-
 
 int isDirective(char *possibleDirec) {
     /* Checking for START is reduntant because we must first check for it in the program before any other directive
@@ -155,7 +129,6 @@ int isDirective(char *possibleDirec) {
     if (strcmp(possibleDirec, "EXPORTS") == 0) { return 1; }
     return 0; // The directive check failed
 }
-
 
 int isOpcode(char *possibleOpcode) {
     // validate the opcodes
@@ -234,7 +207,7 @@ int main(char argc, char *argv[]) {
     int line_number = 1; 
 
     // initialize the symbol table
-    SymbolTable *symbol_table = ST_Create();
+    SymbolTable *symbol_table = ST_create();
     printf("SYMBOL TABLE CREATED\n");
     // use st_set(symbol_table, "SYMBOL", loc_counter) to set new entries in the symbol table
 
@@ -267,16 +240,16 @@ int main(char argc, char *argv[]) {
                 if ( ( line[0] >= 65 ) && ( line[0] <= 90 ) ) {
                     char *sym = token;
                     // if the symbol already exists in the symbol table, we need to throw an error
-                    Symbol *duplicate = ST_Get(symbol_table, sym, loc_counter, line_number);
+                    Symbol *duplicate = ST_get(symbol_table, sym, &loc_counter, &line_number);
                     if (duplicate != NULL) {
                         
                         printf("ERROR: duplicate symbol %s already defined on line%d (current line = %d)\n", 
-                                duplicate->Name, duplicate->SourceLineNumber, line_number);
+                                duplicate->Name, *(duplicate->SourceLineNumber), line_number);
                         return 1;
                     }
 
                     // store the symbol in the symbol table 
-                    ST_Set(symbol_table, sym, loc_counter, line_number);
+                    ST_set(symbol_table, sym, &loc_counter, &line_number);
                     // increment the token to a possible directive/opcode
                     token =  strtok(NULL, " \t");
                     char *opcode = token;
@@ -346,4 +319,5 @@ int main(char argc, char *argv[]) {
     return 0;
     
 }
+
 
