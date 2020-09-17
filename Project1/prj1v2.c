@@ -169,9 +169,8 @@ int calcDirective(char *directive, char *operand, int *loc_counter) {
     if (strcmp(directive, "RESB") == 0) {
         // RESB reserves the indicated (in decimal) number of bytes for a data area
         int byteDec = atoi(operand);
-        int byteHex = (int)strtol(operand, NULL, 16);
-        printf("\t---RESB hex: %X", byteHex);
-        return *loc_counter + byteHex;
+        //int byteHex = (int)strtol(operand, NULL, 16);
+        return *loc_counter + byteDec;
     }
     if (strcmp(directive, "RESW") == 0) {
         return 1;
@@ -300,11 +299,11 @@ int main(char argc, char *argv[]) {
                         printf("ERROR: START directive not encountered before first directive/instruction on line[%d]\n", line_number);
                     }
                     else if (startCheck == 1 && isDirective(opcode) == 1) {
-                        printf("directive: %s\t loc_counter: %X\n", opcode, loc_counter);
+                        printf("symbol: %s\tdirective: %s\tloc_counter: %X\n",sym,  opcode, loc_counter);
                         // advance token to the operand
                         token = strtok(NULL, " \t");
                         char *operand = token;
-                        int newLoc = calcDirective(opcode, operand, &loc_counter);
+                        loc_counter = calcDirective(opcode, operand, &loc_counter);
                         token = strtok(NULL, " \t");
                     }
                     else {
@@ -315,10 +314,10 @@ int main(char argc, char *argv[]) {
                 // if we have already encountered the START directive and the directive/opcode token IS a directive
                 else if (startCheck == 1 && isDirective(token) == 1) {
                     char *directive = token;
-                    printf("\tdirective: %s, loc_counter: %X\n", directive, loc_counter);
+                    printf("directive: %s, loc_counter: %X\n", directive, loc_counter);
                     token = strtok(NULL, " \t");
                     char *operand = token;
-                    int newLoc = calcDirective(directive, operand, &loc_counter);
+                    loc_counter = calcDirective(directive, operand, &loc_counter);
                     token = strtok(NULL, " \t");
                     
                 }
