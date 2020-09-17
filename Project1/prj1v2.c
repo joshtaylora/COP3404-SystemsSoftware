@@ -136,11 +136,15 @@ int isOpcode(char *possibleOpcode) {
 // function to calculate the new loc_counter address
 int calcDirective(char *directive, char *operand, int *loc_counter) {
     if (strcmp(directive, "WORD") == 0) {
-        // write 
-        return 1;
+        // WORD generates a one word (3 bytes) integer constant 
+        return *loc_counter + 3;
     }
     if (strcmp(directive, "RESB") == 0) {
-        return 1;
+        // RESB reserves the indicated (in decimal) number of bytes for a data area
+        int byteDec = atoi(operand);
+        int byteHex = (int)strtol(operand, NULL, 16);
+        printf("\t---RESB hex: %X", byteHex);
+        return *loc_counter + byteHex;
     }
     if (strcmp(directive, "RESW") == 0) {
         return 1;
@@ -158,8 +162,22 @@ int calcDirective(char *directive, char *operand, int *loc_counter) {
             printf("---opChar:%s, length: %d\n", opChar, charLength);
             return *loc_counter + charLength;
         }
+        // BYTE X'hex_sequence'
         else if (operand[0] == 88) {
-            int hexLength = strlen(operand) - 3;
+            char *opHex = strtok(operand, "\'");
+            opHex = strtok(NULL, "\'");
+            int hexLength = strlen(opHex);
+            // if the hex characters are not given in multiples of 2 we cannot properly store them
+            if (hexLength % 2 != 0) {
+                printf("ERROR: improper hex constant allocation: %s\n", opHex);
+                return 0;
+            }
+            int byteLength = hexLength / 2;
+            return *loc_counter + byteLength;
+        }
+        else {
+            printf("ERROR: incorrect usage of BYTE directive\n");
+            return 0;
         }
         
     }
