@@ -300,7 +300,12 @@ int main(char argc, char *argv[]) {
                         printf("ERROR: START directive not encountered before first directive/instruction on line[%d]\n", line_number);
                     }
                     else if (startCheck == 1 && isDirective(opcode) == 1) {
-                        printf("\tdirective: %s\n", opcode);
+                        printf("directive: %s\t loc_counter: %X\n", opcode, loc_counter);
+                        // advance token to the operand
+                        token = strtok(NULL, " \t");
+                        char *operand = token;
+                        int newLoc = calcDirective(opcode, operand, &loc_counter);
+                        token = strtok(NULL, " \t");
                     }
                     else {
                         printf("\topcode: %s\n", opcode);
