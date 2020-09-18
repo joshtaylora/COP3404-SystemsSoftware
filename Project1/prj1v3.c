@@ -7,8 +7,8 @@
 // structure for creating a symbol
 typedef struct Symbol 
 {
-    int Address;
-    int SourceLineNumber;
+    int *Address;
+    int *SourceLineNumber;
     struct Symbol *Next; // pointer to the next symbol in the linked list
     char *Name; // character array to store name of symbol
 } Symbol;
@@ -127,10 +127,6 @@ void ST_Print(SymbolTable *symbolTable)
         }
         for (;;) {
             printf("symbol:%s\tadddress: %d\tsource line: %d\n", entry->Name, address, source);
-            while (entry->Next != NULL) {
-                Symbol *next = entry->Next;
-                printf("symbol:%s\tadddress: %d\tsource line: %d\n", entry->Name, address, source);
-            }
         }
     }
 }
@@ -165,16 +161,16 @@ int isOpcode(char *possibleOpcode) {
     // validate the opcodes
 }
 // function to calculate the new loc_counter address
-int calcDirective(char *directive, char *operand, int loc_counter) {
+int calcDirective(char *directive, char *operand, int *loc_counter) {
     if (strcmp(directive, "WORD") == 0) {
         // WORD generates a one word (3 bytes) integer constant 
-        return loc_counter + 3;
+        return *loc_counter + 3;
     }
     if (strcmp(directive, "RESB") == 0) {
         // RESB reserves the indicated (in decimal) number of bytes for a data area
         int byteDec = atoi(operand);
         //int byteHex = (int)strtol(operand, NULL, 16);
-        return loc_counter + byteDec;
+        return *loc_counter + byteDec;
     }
     if (strcmp(directive, "RESW") == 0) {
         return 1;
@@ -190,7 +186,7 @@ int calcDirective(char *directive, char *operand, int loc_counter) {
             int charLength = strlen(opChar);
 
             printf("---opChar:%s, length: %d\n", opChar, charLength);
-            return loc_counter + charLength;
+            return *loc_counter + charLength;
         }
         // BYTE X'hex_sequence'
         else if (operand[0] == 88) {
@@ -203,7 +199,7 @@ int calcDirective(char *directive, char *operand, int loc_counter) {
                 return 0;
             }
             int byteLength = hexLength / 2;
-            return loc_counter + byteLength;
+            return *loc_counter + byteLength;
         }
         else {
             printf("ERROR: incorrect usage of BYTE directive\n");
@@ -307,7 +303,7 @@ int main(char argc, char *argv[]) {
                         // advance token to the operand
                         token = strtok(NULL, " \t");
                         char *operand = token;
-                        loc_counter = calcDirective(opcode, operand, loc_counter);
+                        loc_counter = calcDirective(opcode, operand, &loc_counter);
                         token = strtok(NULL, " \t");
                     }
                     else {
@@ -321,7 +317,7 @@ int main(char argc, char *argv[]) {
                     printf("directive: %s, loc_counter: %X\n", directive, loc_counter);
                     token = strtok(NULL, " \t");
                     char *operand = token;
-                    loc_counter = calcDirective(directive, operand, loc_counter);
+                    loc_counter = calcDirective(directive, operand, &loc_counter);
                     token = strtok(NULL, " \t");
                     
                 }
@@ -348,8 +344,6 @@ int main(char argc, char *argv[]) {
         // increment the line counter
         line_number++;
 	}
-    
-    //print the symbol table
     ST_Print(symbol_table);
 	// close the opened file
 	fclose( inputFile );
