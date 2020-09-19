@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <regex.h>
 
 int main(int argc, char **argv) {
     // open the file specified by the user
@@ -22,7 +23,6 @@ int main(int argc, char **argv) {
         for (int i = 0; i < strlen(line); i++) {
             printf("line[%d], char[%d] = %c\n",current_line, i, line[i]);
         }
-
         
         // check for a comment
         if (line[0] == 35) {
