@@ -20,41 +20,93 @@ int main(int argc, char *argv[])
     while(fgets(line, 1024, fp) != NULL)
     {
         line[strlen(line)-1] = '\0';
-        int len1, len2;
+        int wspLength, tokenLength;
         int lineIndex = 0;
-        const char wsp[] = " \t";
         char* symbol = malloc(6 * sizeof(char));
         char* opcode = malloc(10 * sizeof(char));
+        char* operand = malloc(10 * sizeof(char));
 
-        //printf("BREAK OCCURS BEFORE WHILE\n");
-        printf("LINE[%d]: %s\n", lineNumber, line);
-        len1 = strcspn(line, wsp);
-        strncpy(symbol, line, len1);
-
+        const char *wsp = " \t";
         const char *alphaUp = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+
+        /*
+        printf("------------------------------------------------------------------------\n");
+        for (int i = 0; i < strlen(line); i++)
+        {
+            printf("LINE[%d], char[%i]: %c\n", lineNumber, i, line[i]);
+        }
+        printf("\n");
+        printf("------------------------------------------------------------------------\n");
+        */
+        
+        //printf("BREAK OCCURS BEFORE WHILE\n");
+        printf("---------------- LINE[%d] ----------------\n", lineNumber);
+        printf("%s\n", line);
+        wspLength = strspn(line, alphaUp);
+        strncpy(symbol, line, wspLength);
+
         if (strlen(symbol) > 0 && strcspn(symbol, alphaUp) == 0)
         {
-            printf("\tSYMBOL[0 - %d]: %s\n",len1, symbol);
-            lineIndex = len1 + 1;
-            len1 = strcspn(line + lineIndex, wsp);
-            len2 = strspn(line + lineIndex, alphaUp);
-            //printf("\tlen1: %d\tlen2: %d\n",len, len2);
-            strncpy(opcode, line + lineIndex, len2);
+            printf("\tSYMBOL[0-%d]:\t%s\tlength = %d\n",wspLength -1, symbol, (int)strlen(symbol));
+            /*
+            lineIndex += wspLength + 1;
+            wspLength = strcspn(line + lineIndex, wsp);
+            */
+            // advance the index in the line to the index right after the symbol we just found
+            lineIndex += wspLength + 1;
             
-            printf("\tOPCODE[%d - %d]: %s\n",lineIndex, lineIndex + len1, opcode);
+            // find the size of the substring in the line that is made up of entirely whitespace characters
+            // ------ we will advance the lineIndex counter this many indeces to get to the next char we want to check
+            wspLength = strspn(line + lineIndex, wsp);
+            lineIndex += wspLength;
+            
+            // find the size of the opcode (must be upper case alpha characters)
+            tokenLength = strspn(line + lineIndex, alphaUp);
+            // copy the opcode characters to a string called opcode
+            strncpy(opcode, line + lineIndex, tokenLength);
+            
+            printf("\tOPCODE[%d-%d]:\t%s\tlength = %d\n",lineIndex, lineIndex + tokenLength - 1, opcode, (int)strlen(opcode));
             //printf("\topcode[%d - %d]: %.*s\n",lineIndex, lineIndex + len, len, line + lineIndex);
-            lineIndex += len1 + 1; 
+            // advance the lineIndex to the position just after the last char of opcode in line
+            lineIndex += tokenLength + 1;
+            
+            // count the whitespace chars between the opcode and the operand
+            wspLength = strspn(line + lineIndex, wsp);
+            lineIndex += wspLength;
+            tokenLength = strcspn(line + lineIndex, wsp);
+            
+            strncpy(operand,line + lineIndex, tokenLength);
+            printf("\tOPERAND[%d-%d]:\t%s\tlength = %d\n", lineIndex, lineIndex + tokenLength - 1, operand, (int)strlen(operand));
+
+
+            printf("\n");
         }
         else
         {
-            len1 = strspn(line, wsp);
-            len2 = strspn(line + len1, alphaUp);
-            lineIndex = len1 + 1;
-            strncpy(opcode, line + len1, len2);
-            printf("\tOPCODE[%d - %d]: %s\n", lineIndex, lineIndex + len1, opcode);
+            // find out the number of chars in line before we get to a non whitespace char
+            wspLength = strspn(line, wsp);
+            // increment the lineIndex to just after the white space characters
+            lineIndex += wspLength;
+            // find out the size of the substring consisting of chars in line from line[wspLength] onward 
+            //      that are all capital letters
+            tokenLength = strspn(line + lineIndex, alphaUp);
+
+            strncpy(opcode, line + wspLength, tokenLength);
+            printf("\tOPCODE[%d-%d]:\t%s\tlength = %d\n", lineIndex, lineIndex + tokenLength - 1, opcode, (int)strlen(opcode));
+            
+            // incrememnt lineIndex after the opcode token
+            lineIndex += tokenLength + 1;
+            wspLength = strspn(line + lineIndex, wsp);
+            // incrememnt lineIndex past the whitespace chars in line after the opcode
+            lineIndex += wspLength;
+            tokenLength = strcspn(line + lineIndex, wsp);
+
+            strncpy(operand, line + lineIndex, tokenLength);
+            printf("\tOPERAND[%d-%d]:\t%s\tlength = %d\n", lineIndex, lineIndex + tokenLength - 1, operand, (int)strlen(operand));
 
         }
         lineNumber++;
+        printf("\n");
         //printf("SYMBOL (using .*): %.*s\n", len, line);
     }
     return 1;
