@@ -150,24 +150,34 @@ int isOpcode(char *possibleOpcode) {
 */
 // function to calculate the new loc_counter address
 int calcDirective(char *directive, char *operand, int *loc_counter) {
-    if (strcmp(directive, "WORD") == 0) {
+    if (strcmp(directive, "END") == 0)
+    {
+        return *loc_counter;
+    }
+    if (strcmp(directive, "WORD") == 0)
+    {
         // WORD generates a one word (3 bytes) integer constant 
         return *loc_counter + 3;
     }
-    if (strcmp(directive, "RESB") == 0) {
+    if (strcmp(directive, "RESB") == 0)
+    {
         // RESB reserves the indicated (in decimal) number of bytes for a data area
         int byteDec = atoi(operand);
         return *loc_counter + byteDec;
     }
-    if (strcmp(directive, "RESW") == 0) {
+    if (strcmp(directive, "RESW") == 0)
+    {
         return 1;
     }
-    if (strcmp(directive, "RESR") == 0) {
+    if (strcmp(directive, "RESR") == 0)
+    {
         return 1;
     }
-    if (strcmp(directive, "BYTE") == 0) {
+    if (strcmp(directive, "BYTE") == 0)
+    {
         // BYTE C'character_sequence'
-        if (operand[0] == 67) {
+        if (operand[0] == 67)
+        {
             char *opChar = strtok(operand, "\'");
             opChar = strtok(NULL, "\'");
             int charLength = strlen(opChar);
@@ -176,19 +186,22 @@ int calcDirective(char *directive, char *operand, int *loc_counter) {
             return *loc_counter + charLength;
         }
         // BYTE X'hex_sequence'
-        else if (operand[0] == 88) {
+        else if (operand[0] == 88)
+        {
             char *opHex = strtok(operand, "\'");
             opHex = strtok(NULL, "\'");
             int hexLength = strlen(opHex);
             // if the hex characters are not given in multiples of 2 we cannot properly store them
-            if (hexLength % 2 != 0) {
+            if (hexLength % 2 != 0)
+            {
                 printf("ERROR: improper hex constant allocation: %s\n", opHex);
                 return 0;
             }
             int byteLength = hexLength / 2;
             return *loc_counter + byteLength;
         }
-        else {
+        else
+        {
             printf("ERROR: incorrect usage of BYTE directive\n");
             return 0;
         }
@@ -332,11 +345,21 @@ int main(int argc, char *argv[]) {
             }
             else if (startCheck == 1 && isDirective(opcode) == 1)
             {
+                Symbol *duplicate = ST_get(symbol_table, symbol, &loc_counter, &line_number);
+                if (duplicate != NULL)
+                {
+                    printf("ERROR: duplicate symbol: %s already defined on line %d (current line = %d\n",
+                            duplicate->Name, *(duplicate->SourceLineNumber), line_number);
+                    return 1;
+                }
+                // if there is not a duplicate symbol in the symbol table, add the new symbol to the table
+                ST_set(symbol_table, symbol, &loc_counter, &line_number);
                 loc_counter = calcDirective(opcode, operand, &loc_counter);
                 printf("symbol: %s\tdirective: %s\toperand: %s\tloc_counter: %X\n", symbol, opcode, operand, loc_counter);
             }
-            else
+            else if (strlen(operand) > 0)
             {
+                loc_counter += 3;
                 printf("symbol: %s\tinstruction: %s\toperand: %s\tloc_counter: %X\n", symbol, opcode, operand, loc_counter);
             }
         }
