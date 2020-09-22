@@ -1,0 +1,19 @@
+#
+# Example SIC Assembler Program.
+#
+#
+COPY	START	1000			# inline comment 1
+FIRST	STL	RETADR			 # inline comment 2
+CLOOP	JSUB	RDREC    		# inline comment 3
+	LDA	LENGTH   				# inline comment 4
+	COMP	ZERO			
+	JEQ	ENDFIL			# inline comment 5
+	JSUB	WRREC			
+	J	CLOOP			
+ENDFIL	LDA	EOF			
+	STA	BUFFER			
+	LDA	THREE			
+	STA	LENGTH			
+	JSUB	WRREC			
+	LDL	RETADR			
+	RSUB		

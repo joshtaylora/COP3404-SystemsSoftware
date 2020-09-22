@@ -21,6 +21,7 @@ int main(int argc, char *argv[])
     {
         line[strlen(line)-1] = '\0';
         int wspLength, tokenLength;
+        int commCheck, notComm;
         int lineIndex = 0;
         char* symbol = malloc(6 * sizeof(char));
         char* opcode = malloc(10 * sizeof(char));
@@ -28,6 +29,7 @@ int main(int argc, char *argv[])
 
         const char *wsp = " \t";
         const char *alphaUp = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+        const char *comment = "#";
 
         /*
         printf("------------------------------------------------------------------------\n");
@@ -45,7 +47,10 @@ int main(int argc, char *argv[])
         wspLength = strspn(line, alphaUp);
         strncpy(symbol, line, wspLength);
 
-        if (strlen(symbol) > 0 && strcspn(symbol, alphaUp) == 0)
+        commCheck = strspn(line, comment);
+
+
+        if (strlen(symbol) > 0 && strcspn(symbol, alphaUp) == 0 && commCheck == 0)
         {
             printf("\tSYMBOL[0-%d]:\t%s\tlength = %d\n",wspLength -1, symbol, (int)strlen(symbol));
             /*
@@ -81,7 +86,7 @@ int main(int argc, char *argv[])
 
             printf("\n");
         }
-        else
+        else if (commCheck == 0)
         {
             // find out the number of chars in line before we get to a non whitespace char
             wspLength = strspn(line, wsp);
@@ -102,8 +107,19 @@ int main(int argc, char *argv[])
             tokenLength = strcspn(line + lineIndex, wsp);
 
             strncpy(operand, line + lineIndex, tokenLength);
-            printf("\tOPERAND[%d-%d]:\t%s\tlength = %d\n", lineIndex, lineIndex + tokenLength - 1, operand, (int)strlen(operand));
+            if (strlen(operand) > 0 && strspn(operand, wsp) <= 0 )
+            {
+                printf("\tOPERAND[%d-%d]:\t%s\tlength = %d\n", lineIndex, lineIndex + tokenLength - 1, operand, (int)strlen(operand));
+            }
 
+        }
+        // this block executes when a comment has been found in a line
+        else 
+        { 
+            printf("\tcommCheck = %d", commCheck);
+            notComm = strcspn(line, comment);
+            printf("\t[%d]\t%.*s\n",notComm, notComm, line);
+            printf("-----was comment\n");
         }
         lineNumber++;
         printf("\n");

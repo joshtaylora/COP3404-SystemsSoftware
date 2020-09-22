@@ -49,7 +49,7 @@ Symbol *Symbol_alloc(  char *name, int *address, int *sourceline ) {
 }
 
 void ST_set( SymbolTable *hashtable, char *name, int *address, int *sourceline) {
-    printf("\tST_set: name: %s\taddress: %d\tsource line: %d\n", name, *address, *sourceline);
+    //printf("\tST_set: name: %s\taddress: %d\tsource line: %d\n", name, *address, *sourceline);
     unsigned int tableIndex = name[0] - 65;
     // summary
     Symbol *entry = hashtable->TableEntries[tableIndex];
@@ -78,7 +78,7 @@ void ST_set( SymbolTable *hashtable, char *name, int *address, int *sourceline) 
 }
 
 Symbol *ST_get(SymbolTable *hashtable, char *name, int *address, int *sourceline) {
-    printf("\tST_get: name: %s\taddress: %d\tsource line: %d\n", name, *address, *sourceline);
+    //printf("\tST_get: name: %s\taddress: %d\tsource line: %d\n", name, *address, *sourceline);
     unsigned int tableIndex = name[0] - 65;
 
     Symbol *entry = hashtable->TableEntries[tableIndex];
@@ -232,114 +232,179 @@ int main(int argc, char *argv[]) {
 	int length;
     // counter that checks if we have encountered the START directive yet
     int startCheck = 0;
+
+    // length of contiguous whitespace, length of token
+    int wspLength, tokenLength;
+    // int to check if a comment is on a line, int to see how much of a line is not a comment
+    int commCheck, notComm;
+    // index of current position in the line
+    int lineIndex;
+    // current line number for line we are comparing
+    int lineNumber = 1;
+
+    
 	
     // fgets returns a null pointer if the EOF char is read
-	while(fgets(line, 1024, inputFile)){
-        printf("LINE[%d]: %s\n", line_number, line);
+	while(fgets(line, 1024, inputFile) != NULL)
+    {
+        // allocate memory for the token strings
+        char* symbol = malloc(6 * sizeof(char));
+        char* opcode = malloc(10 * sizeof(char));
+        char* operand = malloc(10 * sizeof(char));
 
-        for (int i = 0; i < strlen(line); i++) {
-            printf("line[%d], char[%d] = %c\n",line_number, i, line[i]);
-        }
-		 
-		// check for comment ( 35 = character value for ascii value for # symbol )
-		if (line[0] == 35 ) {
-			printf("--was a comment\n");
-            line_number++;
-            continue;
-		}
+        // these are the const char strings used to check for different types of tokens
+        const char* wsp = " \t";
+        const char* alphaUp = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+        const char* comment = "#";
+        // end the line with the null character
+        line[strlen(line)-1] = '\0';
+        // start at the first character in the line
+        lineIndex = 0;
 
-        else {
-            // splits the line into tokens separated by spaces or tabs
-            char *token = strtok(line, " \t");
+        printf("---------------- LINE[%d] ----------------\n", lineNumber);
+        printf("%s\n", line);
 
-            // while there are still tokens on the line
-            while ( token ){
-                // check for a symbol definition: must be an alpha character (ASCII 65 through 90 )
-                if ( ( line[0] >= 65 ) && ( line[0] <= 90 ) ) {
-                    char *sym = token;
-                    // if the symbol already exists in the symbol table, we need to throw an error
-                    Symbol *duplicate = ST_get(symbol_table, sym, &loc_counter, &line_number);
-                    if (duplicate != NULL) {
-                        
-                        printf("ERROR: duplicate symbol %s already defined on line%d (current line = %d)\n", 
-                                duplicate->Name, *(duplicate->SourceLineNumber), line_number);
-                        return 1;
-                    }
+        // check for a comment
+        commCheck = strspn(line, comment);
 
-                    // store the symbol in the symbol table 
-                    ST_set(symbol_table, sym, &loc_counter, &line_number);
-                    // increment the token to a possible directive/opcode
-                    token =  strtok(NULL, " \t");
-                    char *opcode = token;
-                    // check for the start directive
-                    if (startCheck == 0 && strcmp(opcode, "START") == 0) {
-                        // increment counter to indicate the start directive has been found
-                        startCheck = 1;
-                        // increment to the next token to check the starting address
-                        token = strtok(NULL, " \t");
-                        char *addr = token;
-                        // the next 2 lines add the 0X characters to the address token to make the conversion to a hex int easier
-                        char hex[15] = "0X";
-                        strcat(hex, addr);
-                        // makes loc_counter = hex int value of the address specified by the start directive
-                        loc_counter = (int)strtol(hex, NULL, 0);
-                        printf("symbol: %s\topcode: %s\taddress: %X\n", sym, opcode, loc_counter);
+        // count the number of contiguous uppercase alpha characters
+        tokenLength = strspn(line, alphaUp);
+        // copy the symbol name to string called symbol
+        strncpy(symbol, line, tokenLength);
 
-                    }
-                    // if the start directive has not yet been encountered throw an error
-                    else if (startCheck == 0) {
-                        printf("ERROR: START directive not encountered before first directive/instruction on line[%d]\n", line_number);
-                    }
-                    else if (startCheck == 1 && isDirective(opcode) == 1) {
-                        printf("\tdirective: %s, loc_counter: %X\n", opcode, loc_counter);
-                        // advance token to get operand
-                        token = strtok(NULL, " \t");
-                        char *operand = token;
-                        int newLoc = calcDirective(opcode, operand, &loc_counter);
-                        // reach the new line character
-                        token = strtok(NULL, " \t");
-                        loc_counter = newLoc;
-                    }
-                    else {
-                        printf("\topcode: %s\n", opcode);
-                    }
+        wspLength = strspn(line, wsp);
 
-                }
-                // if we have already encountered the START directive and the directive/opcode token IS a directive
-                else if (startCheck == 1 && isDirective(token) == 1) {
-                    char *directive = token;
-                    printf("\tdirective: %s, loc_counter: %X\n", directive, loc_counter);
-                    token = strtok(NULL, " \t");
-                    char *operand = token;
-                    int newLoc = calcDirective(directive, operand, &loc_counter);
-                    token = strtok(NULL, " \t");
-                    loc_counter = newLoc;
+        // if the directive line is a symbol definition
+        if (strlen(symbol) > 0 && strcspn(symbol, alphaUp) == 0 && commCheck == 0)
+        {
+            printf("\tSYMBOL[0-%d]:\t%s\tlength = %d\n", tokenLength - 1, symbol, (int)strlen((symbol)));
+            // incrememnt the line index to the element immediately after the last char in the symbol name
+            lineIndex += tokenLength + 1;
+
+            // count the number of contiguous whitespace characters before the next nonwhitespace character
+            wspLength = strspn(line + lineIndex, wsp);
+            // advance the lineIndex to skip the whitespace characters
+            lineIndex += wspLength;
+
+            // find the size of the opcode (must be upper case alpha characters)
+            tokenLength = strspn(line + lineIndex, alphaUp);
+            strncpy(opcode, line + lineIndex, tokenLength);
+
+            printf("\tOPCODE[%d-%d]:\t%s\tlength = %d\n", lineIndex, lineIndex + tokenLength - 1, opcode, (int)strlen(opcode));
+
+            lineIndex += tokenLength + 1;
+
+            wspLength = strspn(line + lineIndex, wsp);
+            lineIndex += wspLength;
+            // get the length of the operand by counting the number of contiguous NON-whitespace characters
+            tokenLength = strcspn(line + lineIndex, wsp);
+
+            strncpy(operand, line + lineIndex, tokenLength);
+            printf("\tOPERAND[%d-%d]:\t%s\tlength = %d\n", lineIndex, lineIndex + tokenLength - 1, operand, (int)strlen(operand));
+
+            printf("\n");
+
+            // if the directive is the start directive
+            if (startCheck == 0 && strcmp(opcode, "START") == 0)
+            {
+                // log that we have found the start directive
+                startCheck = 1;
+                char hex[15] = "0X";
+                strcat(hex, operand);
+
+                loc_counter = (int)strtol(hex, NULL, 0);
+                // check to see if the symbol is in the table
+                Symbol *duplicate = ST_get(symbol_table, symbol, &loc_counter, &line_number);
+                if (duplicate != NULL)
+                {
                     
+                    printf("ERROR: duplicate symbol %s already defined on line%d (current line = %d)\n", 
+                            duplicate->Name, *(duplicate->SourceLineNumber), line_number);
+                    return 1;
+                }
+                // this executes if the symbol is not already in the table
+                ST_set(symbol_table, symbol, &loc_counter, &line_number);
+                printf("symbol: %s\topcode: %s\toperand: %s\tloc_counter: %X\n", symbol, opcode, operand, loc_counter);
+            }
+            else if (startCheck == 0)
+            {
+                printf("ERROR: START directive not encountered before first directive/instruction on line[%d]\n", line_number);
+            }
+            else if (startCheck == 1 && isDirective(opcode) == 1)
+            {
+                loc_counter = calcDirective(opcode, operand, &loc_counter);
+                printf("symbol: %s\tdirective: %s\toperand: %s\tloc_counter: %X\n", symbol, opcode, operand, loc_counter);
+            }
+            else
+            {
+                printf("symbol: %s\tinstruction: %s\toperand: %s\tloc_counter: %X\n", symbol, opcode, operand, loc_counter);
+            }
+        }
+        
+        // if the line is NOT a symbol definition
+        else if (commCheck == 0)
+        {
+            // count # of contiguous whitespace characters
+            wspLength = strspn(line, wsp);
+            lineIndex += wspLength;
+            // find out the size of the substring consisting of chars in line from line[wspLength] onward 
+            //      that are all capital letters
+            tokenLength = strspn(line + lineIndex, alphaUp);
+
+            strncpy(opcode, line + lineIndex, tokenLength);
+            printf("\tOPCODE[%d-%d]:\t%s\tlength = %d\n", lineIndex, lineIndex + tokenLength - 1, opcode, (int)strlen(opcode));
+            
+            // incrememnt lineIndex after the opcode token
+            lineIndex += tokenLength + 1;
+            wspLength = strspn(line + lineIndex, wsp);
+            // incrememnt lineIndex past the whitespace chars in line after the opcode
+            lineIndex += wspLength;
+            tokenLength = strcspn(line + lineIndex, wsp);
+
+            strncpy(operand, line + lineIndex, tokenLength);
+            if (strlen(operand) > 0 && strspn(operand, wsp) == 0 )
+            {
+                printf("\tOPERAND[%d-%d]:\t%s\tlength = %d\n", lineIndex, lineIndex + tokenLength - 1, operand, (int)strlen(operand));
+                if (startCheck == 1 && isDirective(opcode) == 1)
+                {
+                    printf("\tdirective: %s\toperand: %s\tloc_counter: %X\n", opcode, operand, loc_counter);
+                    loc_counter = calcDirective(opcode, operand, &loc_counter);
                 }
                 // if the directive/opcode token is NOT a directive, increment the location counter by 3 bytes
-                else if (startCheck == 1 && isDirective(token) == 0) {
-                    printf("---not a directive\n");
-                    char *opcode = token;
-                    token = strtok(NULL, " \t");
-                    char *operand = token;
-                    printf("opcode: %s\t operand: %s\tloc_counter: %X\n", opcode, operand, loc_counter);
+                else if (startCheck == 1 && isDirective(opcode) == 0)
+                {
+                    printf("\topcode: %s\t operand: %s\tloc_counter: %X\n", opcode, operand, loc_counter);
                     // increment location counter for the next line
                     loc_counter += 3;
 
                 }
-                else {
+                else
+                {
                     printf("ERROR: not a directive or instruction on line: %d", line_number);
                     return 1;
                 }
-                token = strtok(NULL, " \t\r\n");
-
             }
-        }
+            // this happens when only an opcode is given with no operand
+            else
+            {
+                printf("\tNO OPERAND INSTRUCTION\n");
+            }
 
-        // increment the line counter
-        line_number++;
+        }
+        // this block executes when a comment has been found in a line
+        else 
+        { 
+            printf("\tcommCheck = %d", commCheck);
+            notComm = strcspn(line, comment);
+            printf("\t[%d]\t%.*s\n",notComm, notComm, line);
+            printf("-----was comment\n");
+        }
+        lineNumber++;
+        printf("\n");
+        
+        
 	}
-    ST_print(symbol_table);
+    // ST_print(symbol_table);
     /*
     for (int i = 0; i < TABLE_SIZE; i++) {
         Symbol *entry = symbol_table->TableEntries[i];
