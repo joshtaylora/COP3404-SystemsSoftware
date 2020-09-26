@@ -102,31 +102,24 @@ Symbol *ST_get(SymbolTable *hashtable, char *name, int address, int sourceline) 
 }
 
 
-/*void ST_print( SymbolTable *hashtable ){
-    for( int i = 0; i < TABLE_SIZE; i++ ) {
+void ST_print( SymbolTable *hashtable ){
         // grab the entry in the hashtable at index 1 
         //      - Each index corresponds to an entry with a symbol name starting with a letter in the alphabet
         //      - If there are more than one symbols starting with that letter, the entry links to the next entry
         //          in the linked list using entry->next
+    for (int i = 0; i < TABLE_SIZE; i++) {
         Symbol *entry = hashtable->TableEntries[i];
-        if ( entry == NULL ) 
-        { 
-            continue; 
+        if (entry == NULL) {
+            continue;
         }
-        for (;;) {
+        while (entry!= NULL) {
             printf("%s\t%X\n", entry->Name, entry->Address);
-            /*
-            while (entry->next != NULL) 
-            {
-                Symbol *next = entry->next;
-                printf("%s\t%d\n", next->Name, *(next->Address));
-                Symbol *prev = entry->next;
-                entry = prev->next;
-            }
+            fprintf(outputFile, "%s\t%X\n", entry->Name, entry->Address);
+            entry = entry->next;
         }
     }
 }
-*/
+
 
 int isDirective(char *possibleDirec) {
     /* Checking for START is reduntant because we must first check for it in the program before any other directive
@@ -583,22 +576,10 @@ int main(int argc, char *argv[]) {
         printf("ERROR: location counter[%s] goes over maximum hex address\n", checkAddr);
         return 1;
     }
-    /*
-    // ST_print(symbol_table);
+    ST_print(symbol_table);
     fprintf(outputFile, "PRINTING SYMBOL TABLE NOW\n");
     printf("\nPRINTING SYMBOL TABLE NOW\n");
-    for (int i = 0; i < TABLE_SIZE; i++) {
-        Symbol *entry = symbol_table->TableEntries[i];
-        if (entry == NULL) {
-            continue;
-        }
-        while (entry!= NULL) {
-            printf("%s\t%X\n", entry->Name, entry->Address);
-            fprintf(outputFile, "%s\t%X\n", entry->Name, entry->Address);
-            entry = entry->next;
-        }
-    }
-    */
+		    
     
     fprintf(outputFile, "final loc_counter values\tHEX: %X\t\tDECIMAL: %d", loc_counter, loc_counter);
     
