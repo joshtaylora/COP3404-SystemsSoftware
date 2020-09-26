@@ -1,10 +1,62 @@
-NAMING CONVENTIONS
-- typedef and structs use upper camel case 
-    - ex: SymbolTable, Symbol
-- methods involving the creation, management, and searching of a SymbolTable object have 'ST_' 
-    before a verb describing what the method does in upper camel case (if more than 1 word)
-    - ex: ST_Get, ST_Alloc
-- local variables use lower camel case
-    - ex: locCounter, lineNumber, address
+Project 1 - SIC Assembler Pass 1
 
+==============================================================================================================
+                                         Structs and Types
+==============================================================================================================
+1) Symbol: This custom type is used as a structure to represent the symbols we wil be storing in the symbol 
+    table.
+    Data Members:
+        - char *Name: a pointer to a character array that stores the name of the symbol (the space for Name is 
+            allocated when the symbol is added to the table)
+        - int Address: and integer value storing the address of the location counter when the symbol was added
+            to the table
+        - int SourceLineNumber: an integer value that stores the line that the symbol was defined on in the 
+            source SIC program file
+        - struct Symbol *next: a pointer to the next Symbol struct in the linked list representing symbols whose
+            with Name field has the same first letter 
 
+2) SymbolTable: This type is used as a structure to point to an array of Symbol structs. The SymbolTable
+    struct points to the linked lists for each letter that a symbol can start with.
+    Data Members:
+        - Symbol **TableEntries: a pointer that points to Symbol pointers. This acts as an array indexed by the
+            ASCII codes for uppercase letters with each index acting as a linked list for symbols all with the
+            same first letter in their Name
+==============================================================================================================
+                                            Functions
+==============================================================================================================
+1) ST_create: allocates the memory needed to make the symbol table and sets all of the Symbol 
+    pointers to (null) so we can easily check if an index in the symbol table has already been filled.
+
+2) Symbol_alloc: allocates memory for the data members of a Symbol object before it is added to the symbol
+    table after that symbol has been verified as being unique.
+
+3) ST_set: looks for the first available spot in the symbol table that the symbol can be added to and if the
+    base index that stores symbols with the first letter of that symbol is already occupied, it will loop through
+     the linked list at that index and insert at the first available spot.
+
+4) ST_get: looks for the symbol in the symbol table that matches the Name data member of a symbol and returns 
+    that entry if it is found, otherwise it returns NULL.
+
+5) isDirective: checks if the character string called opcode is a valid directive opcode. Returns 1 if so and
+    0 if it is not valid.
+
+6) calcByte: a helper function for the calcDirective function that calculates the correct location counter
+    address for the BYTE directive.
+
+7) calcDirective: a function that calculates the correct location counter for each valid directive.
+==============================================================================================================
+                                         How does it work?
+==============================================================================================================
+Upon succesfully opening a SIC program file, the assembler creates a symbol table and begins reading each
+line and parsing them for symbol definitions to store the symbols in a symbol table for use in pass 2.
+
+As the assembler encounters a symbol definition line in the SIC file, the assembler uses the ST_get function
+to look through the symbol table to check for any duplicate symbols. If the symbol is not in the symbol table
+already it will be added, otherwise an error is printed and the program exits.
+
+While parsing through each line, the assembler verifies that each line matches the format for valid
+directive and instruction lins for a SIC program and calculates the correct address in which the location counter
+pointed to at the time that a line was read. 
+
+If the assembler reaches the end of the file without encountering an error, the complete symbol table will be 
+printed to the screen in the order that each symbol was added.
