@@ -436,11 +436,6 @@ int main(int argc, char *argv[]) {
         // start at the first character in the line
         lineIndex = 0;
 
-        //printf("---------------- LINE[%d] ----------------\n", lineNumber);
-        //fprintf(outputFile, "---------------- LINE[%d] ----------------\n", lineNumber);
-        //printf("%s\n", line);
-        //fprintf(outputFile, "%s\n", line);
-
         // check for a comment
         commCheck = strspn(line, comment);
 
@@ -472,10 +467,7 @@ int main(int argc, char *argv[]) {
             // find the size of the opcode (must be upper case alpha characters)
             tokenLength = strspn(line + lineIndex, alphaUp);
             strncpy(opcode, line + lineIndex, tokenLength);
-            /*
-            printf("\tOPCODE[%d-%d]:\t%s\tlength = %d\n", 
-                    lineIndex, lineIndex + tokenLength - 1, opcode, (int)strlen(opcode));
-            */
+            
             fprintf(outputFile, "%s\t", opcode);
 
             lineIndex += tokenLength + 1;
@@ -500,10 +492,6 @@ int main(int argc, char *argv[]) {
                 return 1;
             }
 
-           /*
-           printf("\tOPERAND[%d-%d]:\t%s\tlength = %d\n", 
-                    lineIndex, lineIndex + tokenLength - 1, operand, (int)strlen(operand));
-            */
             fprintf(outputFile, "%s\t",operand);
 
             // if the directive is the start directive and we haven't already encountered the start directive
@@ -651,10 +639,6 @@ int main(int argc, char *argv[]) {
             tokenLength = strspn(line + lineIndex, alphaUp);
             // copy the chars in the line that make up the opcode
             strncpy(opcode, line + lineIndex, tokenLength);
-            /*
-            printf("\tOPCODE[%d-%d]:\t%s\tlength = %d\n", 
-                    lineIndex, lineIndex + tokenLength - 1, opcode, (int)strlen(opcode));
-            */
             
             // check for end directive in this line
             if (strcmp(opcode, "END") == 0 && endCheck == 0)
@@ -683,17 +667,12 @@ int main(int argc, char *argv[]) {
             // -- this happens when we have a non symbol definition 
             if (strlen(opcode) > 0 && strlen(operand) > 0 && strspn(operand, wsp) == 0 )
             {
-                /*
-                printf("\tOPERAND[%d-%d]:\t%s\tlength = %d\n", 
-                        lineIndex, lineIndex + tokenLength - 1, operand, (int)strlen(operand));
-                */
                 fprintf(outputFile, "%s\t", operand);
                 
                 // ensure that the start directive has already been found and that the opcode is a directive
                 //  -- happens when we have directive opcode that is not on a symbol definition line
                 if (isDirective(opcode) == 1)
                 {
-                   //printf("\tdirective: %s\toperand: %s\tloc_counter: %X\n", opcode, operand, loc_counter);
                     fprintf(outputFile, "%X\n", loc_counter);
                     // must increase the loc_counter for the line after this line
                     loc_counter = calcDirective(line, opcode, operand, loc_counter, lineNumber);
@@ -760,7 +739,7 @@ int main(int argc, char *argv[]) {
             fprintf(outputFile, "\t[%d]\t%.*s\n",notComm, notComm, line);
             
            //printf("-----was comment\n");
-            fprintf(outputFile, "-----was comment\n");
+            fprintf(outputFile, "#\n");
             
         }
         lineNumber++;
@@ -778,14 +757,7 @@ int main(int argc, char *argv[]) {
         printf("ERROR: location counter[%s] goes over maximum hex address\n", checkAddr);
         return 1;
     }
-    //ST_print(symbol_table);
-    fprintf(outputFile, "PRINTING SYMBOL TABLE NOW\n");
-    //printf("\nPRINTING SYMBOL TABLE NOW\n");
-		    
-    
-    fprintf(outputFile, "final loc_counter values\tHEX: %X\t\tDECIMAL: %d", loc_counter, loc_counter);
-    
-    
+    fprintf(outputFile, "LOC = %X\n", loc_counter);
 	// close the opened file
 	fclose( inputFile );
     fclose( outputFile );
