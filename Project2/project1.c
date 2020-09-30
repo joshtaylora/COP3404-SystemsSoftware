@@ -460,7 +460,7 @@ int main(int argc, char *argv[]) {
                 printf("Line %d: symbol (%s) name cannot be a directive name \n", lineNumber, symbol);
                 return 1;
             }
-            fprintf(outputFile, "||%s||\t", symbol);
+            fprintf(outputFile, "%s\t", symbol);
             // incrememnt the line index to the element immediately after the last char in the symbol name
             lineIndex += tokenLength + 1;
 
@@ -476,7 +476,7 @@ int main(int argc, char *argv[]) {
             printf("\tOPCODE[%d-%d]:\t%s\tlength = %d\n", 
                     lineIndex, lineIndex + tokenLength - 1, opcode, (int)strlen(opcode));
             */
-            fprintf(outputFile, "||%s||\t", opcode);
+            fprintf(outputFile, "%s\t", opcode);
 
             lineIndex += tokenLength + 1;
 
@@ -504,7 +504,7 @@ int main(int argc, char *argv[]) {
            printf("\tOPERAND[%d-%d]:\t%s\tlength = %d\n", 
                     lineIndex, lineIndex + tokenLength - 1, operand, (int)strlen(operand));
             */
-            fprintf(outputFile, "||%s||\t",operand);
+            fprintf(outputFile, "%s\t",operand);
 
             // if the directive is the start directive and we haven't already encountered the start directive
             if (startCheck == 0 && strcmp(opcode, "START") == 0)
@@ -537,7 +537,7 @@ int main(int argc, char *argv[]) {
                 // this executes if the symbol is not already in the table
                 ST_set(symbol_table, symbol, loc_counter, lineNumber);
                 printf("%s\t%X\n", symbol, loc_counter);
-                fprintf(outputFile, "||%X||\n", loc_counter);
+                fprintf(outputFile, "%X\n", loc_counter);
             }
 
             // check if a second START directive is found
@@ -572,7 +572,7 @@ int main(int argc, char *argv[]) {
                 ST_set(symbol_table, symbol, loc_counter, lineNumber);
                 
                 printf("%s\t%X\n", symbol, loc_counter);
-                fprintf(outputFile, "||%X||\n", loc_counter);
+                fprintf(outputFile, "%X\n", loc_counter);
                 loc_counter = calcDirective(line, opcode, operand, loc_counter, lineNumber);
                 if (loc_counter == 0)
                 {
@@ -610,7 +610,7 @@ int main(int argc, char *argv[]) {
                 // if there is not a duplicate symbol in the symbol table, add the new symbol to the table
                 ST_set(symbol_table, symbol, loc_counter, lineNumber);
                 printf("%s\t%X\n", symbol, loc_counter);
-                fprintf(outputFile, "||%X||\n", loc_counter);
+                fprintf(outputFile, "%X\n", loc_counter);
                 // increment the location counter after adding the the symbol to the table
                 loc_counter += 3;
             }
@@ -642,13 +642,6 @@ int main(int argc, char *argv[]) {
                 printf("Line %d: location counter has gone over the maximum address available for a SIC program\n", lineNumber);
                 return 1;
             }
-            int opcodeHex = opcodeCalc(line, opcode, lineNumber);
-            if (opcodeHex < 0 )
-            {
-                errorPrint(line);
-                printf("Line %d: Line contains an invalid opcode mnemonic: %s\n", lineNumber, opcode);
-                return 1;
-            }
             // count # of contiguous whitespace characters from starting index of line
             wspLength = strspn(line, wsp);
             // increment index in the line past the whitespace
@@ -662,6 +655,7 @@ int main(int argc, char *argv[]) {
             printf("\tOPCODE[%d-%d]:\t%s\tlength = %d\n", 
                     lineIndex, lineIndex + tokenLength - 1, opcode, (int)strlen(opcode));
             */
+            
             // check for end directive in this line
             if (strcmp(opcode, "END") == 0 && endCheck == 0)
             {
@@ -673,7 +667,7 @@ int main(int argc, char *argv[]) {
                 printf("Line %d: multiple END directives encounterd\n", lineNumber);
                 return 1;
             }
-            fprintf(outputFile, "||%s||\t", opcode);
+            fprintf(outputFile, "%s\t", opcode);
 
             // incrememnt lineIndex after the opcode token
             lineIndex += tokenLength + 1;
@@ -693,22 +687,29 @@ int main(int argc, char *argv[]) {
                 printf("\tOPERAND[%d-%d]:\t%s\tlength = %d\n", 
                         lineIndex, lineIndex + tokenLength - 1, operand, (int)strlen(operand));
                 */
-                fprintf(outputFile, "||%s||\t", operand);
+                fprintf(outputFile, "%s\t", operand);
                 
                 // ensure that the start directive has already been found and that the opcode is a directive
                 //  -- happens when we have directive opcode that is not on a symbol definition line
                 if (isDirective(opcode) == 1)
                 {
                    //printf("\tdirective: %s\toperand: %s\tloc_counter: %X\n", opcode, operand, loc_counter);
-                    fprintf(outputFile, "||%X||\n", loc_counter);
+                    fprintf(outputFile, "%X\n", loc_counter);
                     // must increase the loc_counter for the line after this line
                     loc_counter = calcDirective(line, opcode, operand, loc_counter, lineNumber);
                 }
                 // if the opcode token is NOT a directive, increment the location counter by 3 bytes
                 else if (isDirective(opcode) == 0)
                 {
+                    int opcodeHex = opcodeCalc(line, opcode, lineNumber);
+                    if (opcodeHex < 0 )
+                    {
+                        errorPrint(line);
+                        printf("Line %d: Line contains an invalid opcode mnemonic: %s\n", lineNumber, opcode);
+                        return 1;
+                    }
                     //printf("\topcode: %s\t operand: %s\tloc_counter: %X\n", opcode, operand, loc_counter);
-                    fprintf(outputFile, "||%X||\n", loc_counter);
+                    fprintf(outputFile, "%X\n", loc_counter);
                     // increment location counter for the next line
                     loc_counter += 3;
 
@@ -733,7 +734,7 @@ int main(int argc, char *argv[]) {
                     fprintf(outputFile, "Line %d: directiv does not contain an operand\n", lineNumber);
                     return 1;
                 }
-                fprintf(outputFile, "||%X||\n",loc_counter);
+                fprintf(outputFile, "%X\n",loc_counter);
                 // increment location counter by 3 bytes for the no-operand instruction
                 loc_counter += 3;
             }
