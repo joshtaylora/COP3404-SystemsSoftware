@@ -436,6 +436,7 @@ int main(int argc, char *argv[]) {
         const char* wsp = " \t\r";
         const char* alphaUp = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
         const char* comment = "#";
+
         // end the line with the null character
         line[strlen(line)-1] = '\0';
         // start at the first character in the line
@@ -460,7 +461,8 @@ int main(int argc, char *argv[]) {
                 printf("Line %d: symbol (%s) name cannot be a directive name \n", lineNumber, symbol);
                 return 1;
             }
-            fprintf(outputFile, "%s\t", symbol);
+            
+
             // incrememnt the line index to the element immediately after the last char in the symbol name
             lineIndex += tokenLength + 1;
 
@@ -472,8 +474,6 @@ int main(int argc, char *argv[]) {
             // find the size of the opcode (must be upper case alpha characters)
             tokenLength = strspn(line + lineIndex, alphaUp);
             strncpy(opcode, line + lineIndex, tokenLength);
-            
-            fprintf(outputFile, "%s\t", opcode);
 
             lineIndex += tokenLength + 1;
 
@@ -497,11 +497,12 @@ int main(int argc, char *argv[]) {
                 return 1;
             }
 
-            fprintf(outputFile, "%s\t",operand);
+            
 
             // if the directive is the start directive and we haven't already encountered the start directive
             if (startCheck == 0 && strcmp(opcode, "START") == 0)
             {
+                
                 // log that we have found the start directive
                 startCheck = 1;
 
@@ -533,6 +534,13 @@ int main(int argc, char *argv[]) {
                 // this executes if the symbol is not already in the table
                 ST_set(symbol_table, symbol, loc_counter, lineNumber);
                 //printf("%s\t%X\n", symbol, loc_counter); // comment out for pass 2
+                // writes the symbol name to the file
+                fprintf(outputFile, "%s\t", symbol);
+                // write the opcode to the file
+                fprintf(outputFile, "%s\t", opcode);
+                // write the operand (location counter starting address) to the file
+                fprintf(outputFile, "%s\t",operand);
+                // write the location counter address to the file
                 fprintf(outputFile, "%X\n", loc_counter);
             }
 
@@ -547,6 +555,8 @@ int main(int argc, char *argv[]) {
             // symbol definition directive line after the START directive line 
             else if (startCheck == 1 && isDirective(opcode) == 1)
             {
+                
+
                 if (loc_counter >= 0x8000)
                 {
                     errorPrint(line);
@@ -566,7 +576,12 @@ int main(int argc, char *argv[]) {
                 }
                 // if there is not a duplicate symbol in the symbol table, add the new symbol to the table
                 ST_set(symbol_table, symbol, loc_counter, lineNumber);
-                
+                // write the symbol to the file
+                fprintf(outputFile, "%s\t", symbol);
+                // write the opcode to the file
+                fprintf(outputFile, "%s\t", opcode);
+                // write the operand (location counter starting address) to the file
+                fprintf(outputFile, "%s\t", operand);
                 //printf("%s\t%X\n", symbol, loc_counter); // comment out for pass 2
                 fprintf(outputFile, "%X\n", loc_counter);
                 loc_counter = calcDirective(line, opcode, operand, loc_counter, lineNumber);
@@ -591,6 +606,8 @@ int main(int argc, char *argv[]) {
                     printf("Line %d: Line contains an invalid opcode mnemonic: %s\n", lineNumber, opcode);
                     return 1;
                 }
+                
+
                 // check if the symbol is already in the table
                 Symbol *duplicate = ST_get(symbol_table, symbol, loc_counter, lineNumber);
                 // if we found a symbol in the table already with that name in the table, throw an error
@@ -606,6 +623,10 @@ int main(int argc, char *argv[]) {
                 // if there is not a duplicate symbol in the symbol table, add the new symbol to the table
                 ST_set(symbol_table, symbol, loc_counter, lineNumber);
                 //printf("%s\t%X\n", symbol, loc_counter); // comment out for Pass 2
+                // write the symbol to the file
+                fprintf(outputFile, "%s\t", symbol);
+                fprintf(outputFile, "%s\t", opcode);
+                fprintf(outputFile, "%s\t", operand);
                 fprintf(outputFile, "%X\n", loc_counter);
                 // increment the location counter after adding the the symbol to the table
                 loc_counter += 3;
@@ -659,7 +680,9 @@ int main(int argc, char *argv[]) {
                 printf("Line %d: multiple END directives encounterd\n", lineNumber);
                 return 1;
             }
-            fprintf(outputFile, "%s\t", opcode);
+
+            // print a tab character to the file followed by the instruction
+            //fprintf(outputFile, "\t%s\t", opcode);
 
             // incrememnt lineIndex after the opcode token
             lineIndex += tokenLength + 1;
@@ -675,12 +698,14 @@ int main(int argc, char *argv[]) {
             // -- this happens when we have a non symbol definition 
             if (strlen(opcode) > 0 && strlen(operand) > 0 && strspn(operand, wsp) == 0 )
             {
-                fprintf(outputFile, "%s\t", operand);
+                //fprintf(outputFile, "%s\t", operand);
                 
                 // ensure that the start directive has already been found and that the opcode is a directive
                 //  -- happens when we have directive opcode that is not on a symbol definition line
                 if (isDirective(opcode) == 1)
                 {
+                    fprintf(outputFile, "%s\t", opcode);
+                    fprintf(outputFile, "%s\t", operand);
                     fprintf(outputFile, "%X\n", loc_counter);
                     // must increase the loc_counter for the line after this line
                     loc_counter = calcDirective(line, opcode, operand, loc_counter, lineNumber);
@@ -695,6 +720,11 @@ int main(int argc, char *argv[]) {
                         printf("Line %d: Line contains an invalid opcode mnemonic: %s\n", lineNumber, opcode);
                         return 1;
                     }
+
+                    // print the opcode for the instruction to the file
+                    fprintf(outputFile, "\t%s\t", opcode);
+                    //fprintf(outputFile, "%.*X\t", 2, opcodeHex);
+                    fprintf(outputFile, "%s\t", operand);
                     //printf("\topcode: %s\t operand: %s\tloc_counter: %X\n", opcode, operand, loc_counter);
                     fprintf(outputFile, "%X\n", loc_counter);
                     // increment location counter for the next line
@@ -721,6 +751,18 @@ int main(int argc, char *argv[]) {
                     fprintf(outputFile, "Line %d: directiv does not contain an operand\n", lineNumber);
                     return 1;
                 }
+                int opcodeHex = opcodeCalc(line, opcode, lineNumber);
+                if (opcodeHex < 0 )
+                {
+                    errorPrint(line);
+                    printf("Line %d: Line contains an invalid opcode mnemonic: %s\n", lineNumber, opcode);
+                    return 1;
+                }
+
+                // print the opcode for the instruction to the file
+                fprintf(outputFile, "\t%s\t", opcode);
+                //fprintf(ooutputFile, "%.*X\t", 2, opcodeHex);
+                fprintf(outputFile, "(null)\t");
                 fprintf(outputFile, "%X\n",loc_counter);
                 // increment location counter by 3 bytes for the no-operand instruction
                 loc_counter += 3;
@@ -738,17 +780,7 @@ int main(int argc, char *argv[]) {
         // this block executes when a comment has been found in a line
         else 
         { 
-           //printf("\tcommCheck = %d", commCheck);
-            fprintf(outputFile, "\tcommCheck = %d", commCheck);
-
-            notComm = strcspn(line, comment);
-           //printf("\t[%d]\t%.*s\n",notComm, notComm, line);
-
-            fprintf(outputFile, "\t[%d]\t%.*s\n",notComm, notComm, line);
-            
-           //printf("-----was comment\n");
-            fprintf(outputFile, "#\n");
-            
+           continue; 
         }
         lineNumber++;
         //printf("\n");
@@ -769,7 +801,9 @@ int main(int argc, char *argv[]) {
     {
         endLoc = loc_counter;
     }
-    fprintf(outputFile, "START: %X\tEND: %X\n", startLoc, endLoc);
+
+    //fprintf(outputFile, "START: %X\tEND: %X\n", startLoc, endLoc);
+
 	// close the opened file
 	fclose( inputFile );
     
@@ -815,7 +849,8 @@ int main(int argc, char *argv[]) {
     sprintf(hStartChar, "00%X", startLoc); // save the startLoc value as a string with the right format
     hIndex += strlen(hStartChar); // increment the hRecord index based on the number of char's added
     strcat(hRecord, hStartChar); // concatenate to the header record
-    printf("hRecord: %s\n", hRecord); // print the h record for debug
+
+    //printf("hRecord: %s\n", hRecord); // print the h record for debug
     //fprintf(objFile, "H%s", );
 
     // hRecord index 13 - 18 are the Length of the object program in bytes (hex)
@@ -847,7 +882,7 @@ int main(int argc, char *argv[]) {
     {
         strcat(hRecord, progLengthChar);
     }
-    printf("H Record: %s\n", hRecord);
+    //printf("H Record: %s\n", hRecord);
     /* //uncomment out to print each character in the hrecord so far
     for (int x = 0; x < strlen(hRecord); x++)
     {
@@ -864,15 +899,9 @@ int main(int argc, char *argv[]) {
 
     // rewind the output file pointer to point to the first line in the file
     rewind(outputFile);
-    int fileIndex = 1;
+    int fileIndex = 0;
     // Loop through the output file line by line
-    while (fgets(line, 1024, outputFile))
-    {
-        // make an index counter for the hRecord
-        int tIndex = 0;
-        tRecord[tIndex] = 'T'; // begin writing the T record
-        
-    }
+    
     // close open objFile
     fclose(objFile);
     fclose(outputFile);
