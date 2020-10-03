@@ -6,10 +6,7 @@
 
 #define TABLE_SIZE 26
 
-FILE *outputFile;
-
 typedef struct AssemblyLine {
-    Symbol *symbol;
     char *lineType;
     char *optab;
     char *operand;
@@ -28,10 +25,9 @@ AssemblyProgram AP_create(int programLines) {
     assemblyProgram->programLines = malloc( sizeof( AssemblyLine ) * programLines );
 }
 
-AssemblyLine *AL_alloc(Symbol *sym, char *lineT, char *opT, char *opnd, int loc)
+AssemblyLine *AL_alloc(char *lineT, char *opT, char *opnd, int loc)
 {
     AssemblyLine *line = malloc(sizeof(line) * 1);
-    line->symbol = malloc(sizeof(sym) * 1);
     line->lineType = malloc(strlen(lineT) + 1);
     line->optab = malloc(strlen(opT) + 1);
     line->operand = malloc(strlen(opnd) + 1);
@@ -44,13 +40,13 @@ AssemblyLine *AL_alloc(Symbol *sym, char *lineT, char *opT, char *opnd, int loc)
     return line;
 }
 
-void AL_set(AssemblyProgram *assemblyP, char *symbol, char *lineType, char *optab, char *operand, int location, int lineNumber)
+void AL_set(AssemblyProgram *assemblyP, char *lineType, char *optab, char *operand, int location, int lineNumber)
 {
     // add the line to the assembly program
     AssemblyLine *line = assemblyP->programLines[lineNumber];
     if (line == NULL)
     {
-        assemblyP->programLines[lineNumber] = AL_alloc(symbol, lineType, optab, operand, location);
+        assemblyP->programLines[lineNumber] = AL_alloc(lineType, optab, operand, location);
         return;
     }
 }
@@ -428,6 +424,7 @@ int main(int argc, char *argv[]) {
     FILE *inputFile;
 	inputFile = fopen( argv[1], "r");
     // open the output file for reading and writing
+    FILE *outputFile;
     outputFile = fopen("output.txt", "w+");
 
 	// check that the file being read exists (if fopen tries to read from a file that does not exist
@@ -582,7 +579,7 @@ int main(int argc, char *argv[]) {
                 ST_set(symbol_table, symbol, loc_counter, lineNumber);
                 //printf("%s\t%X\n", symbol, loc_counter); // comment out for pass 2
                 // writes the symbol name to the file
-                fprintf(outputFile, "%s\t", symbol);
+                //fprintf(outputFile, "%s\t", symbol);
                 // write the opcode to the file
                 fprintf(outputFile, "%s\t", opcode);
                 // write the operand (location counter starting address) to the file
@@ -624,7 +621,7 @@ int main(int argc, char *argv[]) {
                 // if there is not a duplicate symbol in the symbol table, add the new symbol to the table
                 ST_set(symbol_table, symbol, loc_counter, lineNumber);
                 // write the symbol to the file
-                fprintf(outputFile, "%s\t", symbol);
+                //fprintf(outputFile, "%s\t", symbol);
                 // write the opcode to the file
                 fprintf(outputFile, "%s\t", opcode);
                 // write the operand (location counter starting address) to the file
@@ -671,8 +668,8 @@ int main(int argc, char *argv[]) {
                 ST_set(symbol_table, symbol, loc_counter, lineNumber);
                 //printf("%s\t%X\n", symbol, loc_counter); // comment out for Pass 2
                 // write the symbol to the file
-                fprintf(outputFile, "%s\t", symbol);
-                fprintf(outputFile, "%s\t", opcode);
+                //fprintf(outputFile, "%s\t", symbol);
+                fprintf(outputFile, "0x%.*X\t", 2, opcodeHex);
                 fprintf(outputFile, "%s\t", operand);
                 fprintf(outputFile, "%X\n", loc_counter);
                 // increment the location counter after adding the the symbol to the table
@@ -769,8 +766,8 @@ int main(int argc, char *argv[]) {
                     }
 
                     // print the opcode for the instruction to the file
-                    fprintf(outputFile, "\t%s\t", opcode);
-                    //fprintf(outputFile, "%.*X\t", 2, opcodeHex);
+                    //fprintf(outputFile, "\t%s\t", opcode);
+                    fprintf(outputFile, "0x%.*X\t", 2, opcodeHex);
                     fprintf(outputFile, "%s\t", operand);
                     //printf("\topcode: %s\t operand: %s\tloc_counter: %X\n", opcode, operand, loc_counter);
                     fprintf(outputFile, "%X\n", loc_counter);
@@ -807,8 +804,8 @@ int main(int argc, char *argv[]) {
                 }
 
                 // print the opcode for the instruction to the file
-                fprintf(outputFile, "\t%s\t", opcode);
-                //fprintf(ooutputFile, "%.*X\t", 2, opcodeHex);
+                //fprintf(outputFile, "\t%s\t", opcode);
+                fprintf(outputFile, "0x%.*X\t", 2, opcodeHex);
                 fprintf(outputFile, "(null)\t");
                 fprintf(outputFile, "%X\n",loc_counter);
                 // increment location counter by 3 bytes for the no-operand instruction
@@ -865,29 +862,89 @@ int main(int argc, char *argv[]) {
     AssemblyProgram assemblyProg = AP_create(lineNumber);
     
     // rewind the output file pointer to point to the first line in the file
-    rewind(outputFile);
+    //rewind(outputFile);
     int fileIndex = 1; // create index to track where we are in the file
     int bufferIndex; // create index to track where we are in the line
     char lineBuffer[1024]; // create a buffer to store the characters we read into the line
     
+    //char *optab = malloc(sizeof(char) * 6);
+    
+    int opcode;
 
     char *alpha = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
     char *wsp = " \t\r";
 
     int wspLen;
     int alphaLen;
+    int opLen;
+    int hexLen;
 
+    fclose(outputFile);
+    outputFile = fopen("output.txt", "r");
 
     // Loop through the output file line by line loading it into a buffer
     while (fgets(lineBuffer, 1024, outputFile) != NULL)
     {
+        alphaLen = 0;
+        wspLen = 0;
+        opLen = 0;
+        hexLen = 0;
+
         bufferIndex = 0;
-        // symbol definition line
+        char *optab = malloc(sizeof(char) * 6);
+
+        if (lineBuffer[0] == '\n')
+        {
+            continue;
+        }
+        
         if ((wspLength = strspn(lineBuffer, wsp)) == 0)
         {
+            alphaLen = strspn(lineBuffer, alpha);
+            if (alphaLen > 0)
+            {
+                
+                strncpy(optab, lineBuffer, alphaLen);
+                // if the char sequence we just saved is a directive we can skip the line
+                if (isDirective(optab) || strcmp(optab, "START"))
+                {
+                    // comment out for official submission
+                    // */
+                    printf("Skipped Directive Line: \n\t%s\n", lineBuffer);
+                    // */
+                    continue;
+                }
+                bufferIndex += alphaLen; // increment index in the buffer
+            }
+            else if ((opLen = strspn(lineBuffer, "0")) == 1)
+            {
+                char *opC = malloc(sizeof(char) * 4);
+                sprintf(opC, "%.*s", 4, lineBuffer);
+                opcode = (int)strtol(opC, NULL, 16);
+                // /*
+                printf("opcode: %X\n", opcode);
+                // */
+                bufferIndex += strlen(opC) - 1;
+                wspLen = strspn(lineBuffer + bufferIndex, wsp);
+                if ((alphaLen = strspn(lineBuffer + wspLen, alpha)) > 0)
+                {
+                    char *symbolS = malloc(sizeof(char) * alphaLen);
+                    strncpy(symbolS, lineBuffer + wspLen, alphaLen);
+                    printf("Symbol: %s", symbolS);
+                    //if (ST_get(symbol_table, ))
+                }
+            }
+            
+            printf("lineBuffer[%d +]:\t%s\n", bufferIndex, lineBuffer + bufferIndex);
+            
+            wspLen = strspn(lineBuffer + bufferIndex, wsp);
+            
+            bufferIndex += wspLen;
+            //printf("Line after");
+            
             
         }
-
+        fileIndex++;
     }
     
     int programSize = endLoc - startLoc;
