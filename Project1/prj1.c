@@ -5,6 +5,8 @@
 
 #define TABLE_SIZE 26
 
+
+
 typedef struct Symbol {
     char *Name; // character array to store name of symbol
     int Address;
@@ -51,7 +53,7 @@ Symbol *Symbol_alloc(  char *name, int address, int sourceline ) {
 }
 
 void ST_set( SymbolTable *hashtable, char *name, int address, int sourceline) {
-    //printf("\tST_set: name: %s\taddress: %d\tsource line: %d\n", name, *address, *sourceline);
+    //printf("ST_set: name: %s\taddress: %X\tsource line: %d\n", name, address, sourceline);
     unsigned int tableIndex = name[0] - 65;
     // summary
     Symbol *entry = hashtable->TableEntries[tableIndex];
@@ -67,16 +69,15 @@ void ST_set( SymbolTable *hashtable, char *name, int address, int sourceline) {
     
     while ( entry != NULL ){
         // check if the symbol name matches the name of a symbol in the first position of the linked list for that letter
-        if ( strcmp( entry->Name, name ) == 0 ) {
-            free( entry->Name );
-            entry->Name = malloc( strlen( name ) + 1 );
-            strcpy( entry->Name, name );
+        if ( entry->next == NULL ) {
+            entry->next = Symbol_alloc(name, address, sourceline);
             return;
         }
         // walk to the next entry and update the next pointer
         prev = entry;
         entry = prev->next;
     }
+    
 }
 
 Symbol *ST_get(SymbolTable *hashtable, char *name, int address, int sourceline) {
@@ -99,6 +100,7 @@ Symbol *ST_get(SymbolTable *hashtable, char *name, int address, int sourceline) 
     // no matching entry found
     return NULL;
 }
+
 
 /*void ST_print( SymbolTable *hashtable ){
     for( int i = 0; i < TABLE_SIZE; i++ ) {
@@ -256,9 +258,6 @@ int main(int argc, char *argv[]) {
 
     // The Location Counter that tells where we are in memory 
 	int loc_counter;
-    // specifies the line that a symbol is defined on
-    int line_number; 
-    line_number = 1; 
 
     // initialize the symbol table
     SymbolTable *symbol_table = ST_create();
@@ -371,34 +370,34 @@ int main(int argc, char *argv[]) {
 
                 loc_counter = (int)strtol(hex, NULL, 0);
                 // check to see if the symbol is in the table
-                Symbol *duplicate = ST_get(symbol_table, symbol, loc_counter, line_number);
+                Symbol *duplicate = ST_get(symbol_table, symbol, loc_counter, lineNumber);
                 if (duplicate != NULL)
                 {
                     
                    printf("ERROR: duplicate symbol %s already defined on line%d (current line = %d)\n", 
-                            duplicate->Name, duplicate->SourceLineNumber, line_number);
+                            duplicate->Name, duplicate->SourceLineNumber, lineNumber);
                     fprintf(outputFile, "ERROR: duplicate symbol %s already defined on line%d (current line = %d)\n", 
-                            duplicate->Name, duplicate->SourceLineNumber, line_number);
+                            duplicate->Name, duplicate->SourceLineNumber, lineNumber);
                     return 1;
                 }
                 // this executes if the symbol is not already in the table
-                ST_set(symbol_table, symbol, loc_counter, line_number);
+                ST_set(symbol_table, symbol, loc_counter, lineNumber);
                printf("%s\t%X\n", symbol, loc_counter);
             }
             
             else if (startCheck == 1 && isDirective(opcode) == 1)
             {
-                Symbol *duplicate = ST_get(symbol_table, symbol, loc_counter, line_number);
+                Symbol *duplicate = ST_get(symbol_table, symbol, loc_counter, lineNumber);
                 if (duplicate != NULL)
                 {
                     printf("ERROR: duplicate symbol: %s already defined on line %d (current line = %d\n",
-                            duplicate->Name, duplicate->SourceLineNumber, line_number);
+                            duplicate->Name, duplicate->SourceLineNumber, lineNumber);
                     fprintf(outputFile, "ERROR: duplicate symbol: %s already defined on line %d (current line = %d\n",
-                            duplicate->Name, duplicate->SourceLineNumber, line_number);
+                            duplicate->Name, duplicate->SourceLineNumber, lineNumber);
                     return 1;
                 }
                 // if there is not a duplicate symbol in the symbol table, add the new symbol to the table
-                ST_set(symbol_table, symbol, loc_counter, line_number);
+                ST_set(symbol_table, symbol, loc_counter, lineNumber);
                 
                 printf("%s\t%X\n", symbol, loc_counter);
                 fprintf(outputFile, "symbol: ||%s||\tdirective: ||%s||\toperand: ||%s||\tloc_counter: %X\n", 
@@ -409,18 +408,18 @@ int main(int argc, char *argv[]) {
             else if (startCheck == 1 && strlen(opcode) > 0 && strlen(operand) > 0)
             {
                 // check if the symbol is already in the table
-                Symbol *duplicate = ST_get(symbol_table, symbol, loc_counter, line_number);
+                Symbol *duplicate = ST_get(symbol_table, symbol, loc_counter, lineNumber);
                 // if we found a symbol in the table already with that name in the table, throw an error
                 if (duplicate != NULL)
                 {
                     printf("ERROR: duplicate symbol: %s already defined on line %d (current line = %d\n",
-                            duplicate->Name, duplicate->SourceLineNumber, line_number);
+                            duplicate->Name, duplicate->SourceLineNumber, lineNumber);
                     fprintf(outputFile, "ERROR: duplicate symbol: %s already defined on line %d (current line = %d\n",
-                            duplicate->Name, duplicate->SourceLineNumber, line_number);
+                            duplicate->Name, duplicate->SourceLineNumber, lineNumber);
                     return 1;
                 }
                 // if there is not a duplicate symbol in the symbol table, add the new symbol to the table
-                ST_set(symbol_table, symbol, loc_counter, line_number);
+                ST_set(symbol_table, symbol, loc_counter, lineNumber);
                 printf("%s\t%X\n", symbol, loc_counter);
                 
                 fprintf(outputFile, "symbol: ||%s||\tinstruction: ||%s||\toperand: ||%s||\tloc_counter: ||%X||\n", 
@@ -432,15 +431,15 @@ int main(int argc, char *argv[]) {
             else if (startCheck == 0)
             {
                 printf("ERROR: START directive not encountered before first directive/instruction on line[%d]\n", 
-                        line_number);
+                        lineNumber);
                 fprintf(outputFile, "ERROR: START directive not encountered before first directive/instruction on line[%d]\n", 
-                        line_number);
+                        lineNumber);
                 return 1;
             }
             else
             {
-                printf("ERROR: assembly line syntax not valid on line[%d]", line_number);
-                fprintf(outputFile, "ERROR: assembly line syntax not valid on line[%d]", line_number);
+                printf("ERROR: assembly line syntax not valid on line[%d]", lineNumber);
+                fprintf(outputFile, "ERROR: assembly line syntax not valid on line[%d]", lineNumber);
                 return 1;
             }
             
@@ -508,8 +507,8 @@ int main(int argc, char *argv[]) {
                 // if the line 
                 else
                 {
-                    printf("ERROR: not a directive or instruction on line: %d", line_number);
-                    fprintf(outputFile, "ERROR: not a directive or instruction on line: %d", line_number);
+                    printf("ERROR: not a directive or instruction on line: %d", lineNumber);
+                    fprintf(outputFile, "ERROR: not a directive or instruction on line: %d", lineNumber);
 
                     return 1;
                 }
@@ -519,8 +518,8 @@ int main(int argc, char *argv[]) {
             {
                 if (isDirective(opcode) == 1)
                 {
-                    printf("ERROR: directive line[%d] does not contain an operand\n", line_number);
-                    fprintf(outputFile, "ERROR: directive line[%d] does not contain an operand\n", line_number);
+                    printf("ERROR: directive line[%d] does not contain an operand\n", lineNumber);
+                    fprintf(outputFile, "ERROR: directive line[%d] does not contain an operand\n", lineNumber);
                     return 1;
                 }
                 fprintf(outputFile, "opcode:\t||%s||\t\toperand:\tNONE\t\tloc_counter: %X\n", opcode, loc_counter);
@@ -530,8 +529,8 @@ int main(int argc, char *argv[]) {
             // this happens when only an opcode is given with no operand
             else
             {
-               printf("ERROR: line[%d] does not contain a symbol, opcode, and operand\n", line_number);
-                fprintf(outputFile, "ERROR: line[%d] does not contain a symbol, opcode, and operand\n", line_number);
+               printf("ERROR: line[%d] does not contain a symbol, opcode, and operand\n", lineNumber);
+                fprintf(outputFile, "ERROR: line[%d] does not contain a symbol, opcode, and operand\n", lineNumber);
             }
 
         }
@@ -548,6 +547,7 @@ int main(int argc, char *argv[]) {
             
            //printf("-----was comment\n");
             fprintf(outputFile, "-----was comment\n");
+            
         }
         lineNumber++;
         //printf("\n");
@@ -556,30 +556,21 @@ int main(int argc, char *argv[]) {
         
 	}
     // ST_print(symbol_table);
-    /*
+    fprintf(outputFile, "PRINTING SYMBOL TABLE NOW\n");
+    printf("\nPRINTING SYMBOL TABLE NOW\n");
     for (int i = 0; i < TABLE_SIZE; i++) {
         Symbol *entry = symbol_table->TableEntries[i];
         if (entry == NULL) {
             continue;
         }
-        printf("%s\t%X\n", entry->Name, entry->Address);
-        fprintf(outputFile, "%s\t%X\n", entry->Name, entry->Address);
-
-        Symbol *nextSym = entry->next;
-        while (nextSym != NULL) {
-            printf("%s\t%X\n", nextSym->Name, nextSym->Address);
-            fprintf(outputFile, "%s\t%X\n", nextSym->Name, nextSym->Address);
-
-            Symbol *nextSym = nextSym->next;
+        while (entry!= NULL) {
+            printf("%s\t%X\n", entry->Name, entry->Address);
+            fprintf(outputFile, "%s\t%X\n", entry->Name, entry->Address);
+            entry = entry->next;
         }
     }
-    */
-    char* hexVal = malloc(sizeof(char) * 8);
-    char* intermediary = malloc(sizeof(char) * 15);
-    itoa(loc_counter, intermediary, 16);
-    strcat(hexVal,"x");
-    strcat(hexVal, intermediary);
-    fprintf(outputFile, "final loc_counter values\tHEX: %X\t\tDECIMAL: %d", (int)strtol(hexVal, NULL, 16), loc_counter);
+    
+    fprintf(outputFile, "final loc_counter values\tHEX: %X\t\tDECIMAL: %d", loc_counter, loc_counter);
     
     
 	// close the opened file

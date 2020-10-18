@@ -341,7 +341,7 @@ int calcDirective(char* line, char *directive, char *operand, int loc_counter, i
         // WORD generates a one word (3 bytes) integer constant 
         int opVal = atoi(operand);
         //printf("\tWORD operand = %d\n", opVal);
-        if (opVal >= 8388607)
+        if (opVal >= 16777216)
         {
             errorPrint(line);
             printf("Line %d: attempt to generate a word-length constant (%d) greater than the size of a word\n", lineNumber, opVal);
@@ -888,7 +888,7 @@ int main(int argc, char *argv[]) {
     fclose(outputFile);
     outputFile = fopen("output.txt", "r");
     // make the correct output file name
-    char* objFilename = strcat(strtok(argv[1],"."), ".obj");
+    char* objFilename = strcat(argv[1], ".obj");
     char objStr[60];
     char* objFilePath = objStr;
     
@@ -954,7 +954,6 @@ int main(int argc, char *argv[]) {
             char *labeltab = malloc(sizeof(char) * alphaLen);
             sprintf(labeltab, "%.*s", alphaLen, lineBuffer + bufferIndex);
             
-            
             bufferIndex += strlen(labeltab) + 1;
             alphaLen = strspn(lineBuffer + bufferIndex, alpha);
             sprintf(optab, "%.*s", alphaLen, lineBuffer + bufferIndex);
@@ -978,7 +977,7 @@ int main(int argc, char *argv[]) {
             
             
         } // symbol definition line
-        else if (lineBuffer[bufferIndex] != '\t')
+        else if ( headerCheck == 1 && lineBuffer[bufferIndex] != '\t')
         {
             int alphaLen = (int)strspn(lineBuffer + bufferIndex, alpha);
             char *labeltab = malloc(sizeof(char) * alphaLen);
@@ -993,6 +992,237 @@ int main(int argc, char *argv[]) {
                 /*
                 printf("optab: %s\n", optab);
                 */
+                if (isDirective(optab) == 1)
+                {
+                    if (strcmp(optab, "BYTE") == 0)
+                    {
+                        bufferIndex += 5;
+                        if (lineBuffer[bufferIndex] == 'X' && lineBuffer[bufferIndex + 1] == '\'')
+                        {
+                            bufferIndex += 2;
+                            int bytehex = strcspn(lineBuffer + bufferIndex, "\'");
+                            sprintf(operandtab, "%.*s", bytehex, lineBuffer + bufferIndex);
+                            /*
+                            printf("bytehex: %s\n", operandtab);
+                            */
+                            int bytehexLen = (int)strlen(operandtab) / 2;
+                            char *textR = malloc(sizeof(char) * 69);
+                            sprintf(textR, "T%06X%.*X%s", locCount, 2, bytehexLen, operandtab);
+                            fprintf(objFile, "%s\n", textR);
+                            //printf("%s\n", textR);
+                            free(textR);
+                        }
+                        else if (lineBuffer[bufferIndex] == 'C' && lineBuffer[bufferIndex + 1] == '\'')
+                        {
+                            // skip past the 'C' and '\'' characters
+                            bufferIndex += 2;
+                            int bytehex = strcspn(lineBuffer + bufferIndex, "\'");
+                            sprintf(operandtab, "%.*s", bytehex, lineBuffer + bufferIndex);
+                            int optabLen = strlen(operandtab);
+                            operandtab[optabLen] = '\0';
+                            
+                            const char *byteCharHex = convertCharConst(operandtab);
+
+                            bufferIndex += 2 * strlen(operandtab);
+
+
+                            int bcLen = strlen(byteCharHex);
+                            //printf("bcLen: %d\n", bcLen);
+                            if (bcLen > 60)
+                            {
+                                char *textR = malloc(sizeof(char) * 200);
+                                char *textR2 = malloc(sizeof(char) * 200);
+                                sprintf(textR, "T%06X%.*X%.*s", locCount, 2, (bcLen/2)/2, bcLen/2, byteCharHex);
+                                fprintf(objFile, "%s\n", textR);
+                                
+                                sprintf(textR2, "T%06X%.*X%.*s", locCount + (bcLen/2)/2, 2, (bcLen/2)/2, bcLen/2, byteCharHex + bcLen/2);
+                                fprintf(objFile, "%s\n", textR2);
+
+                                //printf("%s\n", textR);
+                                //printf("%s\n", textR2);
+                                free(textR);
+                                free(textR2);
+                                //free(labeltab);
+                                //free(optab)
+                                //free(operandtab)
+                                fileIndex++;
+                                continue;
+                            }
+                            else
+                            {
+                                char *textR = malloc(sizeof(char) * 200);
+                                sprintf(textR, "T%06X%.*X%s", locCount, 2, optabLen, byteCharHex);
+                                fprintf(objFile, "%s\n", textR);
+                                //printf("%s\n", textR);
+                                free(textR);
+                                ////free(labeltab);
+                                ////free(optab)
+                                ////free(operandtab)
+                                fileIndex++;
+                                continue;
+                            }
+                
+                        }
+                    }
+                    else if (strcmp(optab, "WORD") == 0)
+                    {
+                        bufferIndex += 5; // skip past WORD and the subsequent tab character
+
+                        //printf("WORD: %s\n", lineBuffer + bufferIndex);
+                        int wordDLen = strcspn(lineBuffer + bufferIndex, wsp);
+
+                        char *wordChar = malloc(sizeof(char) * 100);
+                        sprintf(wordChar, "%.*s", wordDLen, lineBuffer + bufferIndex);
+                        int operandLen = strlen(wordChar) / 2;
+
+                        int wordDec = atoi(wordChar);
+                        //printf("wordChar: %s\n", wordChar);
+                        char *textR = malloc(sizeof(char) * 200);
+                        sprintf(textR, "T%06X03%06X", locCount,  wordDec);
+                        fprintf(objFile, "%s\n", textR);
+                        //printf("%s\n", textR);
+                        free(textR);
+                        //free(wordChar);
+                        //free(labeltab);
+                        //free(optab)
+                        //free(operandtab)
+                        fileIndex++;
+                        continue;
+                    }
+                    // this is for when we define a symbol for the END directive
+                    else if (strcmp(optab, "END") == 0 && endrecordcheck == 0)
+                    {
+                        bufferIndex += 4;
+                        int symbolLen = strspn(lineBuffer + bufferIndex, alpha);
+                        sprintf(operandtab, "%.*s", symbolLen, lineBuffer + bufferIndex);
+                        printf("%s\n",operandtab);
+                        //printf("END record symbol: %s\n", operandtab);
+                        Symbol *endSym = ST_get(symbol_table, operandtab);
+                        // if the symbol is not found in the symbol table
+                        if (endSym == NULL)
+                        {
+                            errorPrint(lineBuffer);
+                            printf("Line %d: Symbol (%s) is used but is never defined\n", fileIndex, operandtab);
+                            return 1;
+                        }
+                        char *endR = malloc(sizeof(char) * 8);
+                        sprintf(endR, "E%06X", firstInstruction);
+                        fprintf(objFile, "%s\n", endR);
+                        //printf("%s\n", endR);
+                        free(endR);
+                        //free(labeltab);
+                        //free(optab)
+                        //free(operandtab)
+                        fileIndex++;
+                        endrecordcheck = 1;
+                        continue;
+                        
+                    }
+                    else if (strcmp(optab, "END") == 0 && endrecordcheck != 0)
+                    {
+                        errorPrint(lineBuffer);
+                        printf("Line %d: multiple END directives used in program\n", fileIndex);
+                        //printf("symbol: %s\topcode: %s\toperand: %s\n", labeltab, optab, operandtab);
+                        remove(objFilePath);
+                        return 1;
+                    }
+                    else // the directive is one that does not store a constant
+                    {
+                        //printf("Directive line -> skip\n");
+                        fileIndex++;
+                        continue;
+                    }
+                }
+            }
+            else // symbol definiton with an instruction for the optab
+            {
+                //printf("%s", lineBuffer + bufferIndex);
+                if (lineBuffer[bufferIndex] == '0')
+                {
+                    sprintf(optab, "%.*s", 4, lineBuffer+bufferIndex);
+                    int opHex = strtol(optab, NULL, 16);
+                    //printf("%X\n", opHex);
+                    bufferIndex += 5;
+                    alphaLen = 0;
+                    alphaLen = strspn(lineBuffer + bufferIndex, alpha);
+                    if (alphaLen > 1)
+                    {
+                        sprintf(operandtab, "%.*s", alphaLen, lineBuffer + bufferIndex);
+                        bufferIndex += strlen(operandtab);
+                        //printf("operand: %s\n", operandtab);
+                        Symbol *symbolR = ST_get(symbol_table, operandtab);
+                        if (symbolR != NULL)
+                        {
+                            if (lineBuffer[bufferIndex] == ',')
+                            {
+                                bufferIndex++;
+                                if (lineBuffer[bufferIndex] == 'X')
+                                {
+                                    //printf("Line %d: INDEXED ADDRESSING\n", fileIndex);
+                                    char *textR = malloc(sizeof(char) * 69);
+                                    sprintf(textR, "T%06X03%.*X%04X", locCount, 2, opHex, symbolR->Address + 0x8000);
+                                    fprintf(objFile, "%s\n", textR);
+                                    //printf("%s\n", textR);
+                                    free(textR);
+                                    //free(labeltab);
+                                    //free(optab)
+                                    //free(operandtab)
+                                    fileIndex++;
+                                    continue;
+                                }
+                            }
+                            else
+                            {
+                                char *textR = malloc(sizeof(char) * 69);
+                                sprintf(textR, "T%06X03%.*X%04X", locCount, 2, opHex, symbolR->Address);
+                                fprintf(objFile, "%s\n", textR);
+                                //printf("%s\n", textR);
+                                free(textR);
+                                //free(operandtab)
+                                //free(labeltab);
+                                //free(optab)
+                                //free(operandtab)
+                                fileIndex++;
+                                continue;
+                            }
+                            
+                        }
+                        else
+                        {
+                            errorPrint(lineBuffer);
+                            printf("Line %d: Symbol (%s) does not exist in symbol table.\n", fileIndex, operandtab);
+                            remove(objFilePath);
+                            return 1;
+                        }
+                        
+                    }
+                    else
+                    {
+                        errorPrint(lineBuffer);
+                        printf("Line %d: operand is not valid for the %s instruction\n", fileIndex, optab);
+                        remove(objFilePath);
+                        return 1;
+                    }
+                    
+
+                }
+            }
+            
+        }
+        // this executes for non-symbol definiton lines
+        else if (headerCheck == 1 && lineBuffer[bufferIndex] == '\t')
+        {
+            bufferIndex++;
+            alphaLen = 0;
+            alphaLen = strspn(lineBuffer + bufferIndex, alpha);
+            // check for end directive
+            if (alphaLen > 1)
+            {
+                sprintf(optab, "%.*s", alphaLen, lineBuffer + bufferIndex);
+                /*
+                printf("No sym optab: %s\n", optab);
+                */
+                 
                 if (isDirective(optab) == 1)
                 {
                     if (strcmp(optab, "BYTE") == 0)
@@ -1118,6 +1348,7 @@ int main(int argc, char *argv[]) {
                         continue;
                         
                     }
+
                     else if (strcmp(optab, "END") == 0 && endrecordcheck != 0)
                     {
                         errorPrint(lineBuffer);
@@ -1134,113 +1365,8 @@ int main(int argc, char *argv[]) {
                     }
                 }
             }
-            else // symbol definiton with an instruction for the optab
-            {
-                //printf("%s", lineBuffer + bufferIndex);
-                if (lineBuffer[bufferIndex] == '0')
-                {
-                    sprintf(optab, "%.*s", 4, lineBuffer+bufferIndex);
-                    int opHex = strtol(optab, NULL, 16);
-                    //printf("%X\n", opHex);
-                    bufferIndex += 5;
-                    alphaLen = 0;
-                    alphaLen = strspn(lineBuffer + bufferIndex, alpha);
-                    if (alphaLen > 1)
-                    {
-                        sprintf(operandtab, "%.*s", alphaLen, lineBuffer + bufferIndex);
-                        bufferIndex += strlen(operandtab);
-                        //printf("operand: %s\n", operandtab);
-                        Symbol *symbolR = ST_get(symbol_table, operandtab);
-                        if (symbolR != NULL)
-                        {
-                            if (lineBuffer[bufferIndex] == ',')
-                            {
-                                bufferIndex++;
-                                if (lineBuffer[bufferIndex] == 'X')
-                                {
-                                    //printf("Line %d: INDEXED ADDRESSING\n", fileIndex);
-                                    char *textR = malloc(sizeof(char) * 69);
-                                    sprintf(textR, "T%06X03%.*X%X", locCount, 2, opHex, symbolR->Address + 0x8000);
-                                    fprintf(objFile, "%s\n", textR);
-                                    //printf("%s\n", textR);
-                                    free(textR);
-                                    //free(labeltab);
-                                    //free(optab)
-                                    //free(operandtab)
-                                    fileIndex++;
-                                    continue;
-                                }
-                            }
-                            else
-                            {
-                                char *textR = malloc(sizeof(char) * 69);
-                                sprintf(textR, "T%06X03%.*X%X", locCount, 2, opHex, symbolR->Address);
-                                fprintf(objFile, "%s\n", textR);
-                                //printf("%s\n", textR);
-                                free(textR);
-                                //free(operandtab)
-                                //free(labeltab);
-                                //free(optab)
-                                //free(operandtab)
-                                fileIndex++;
-                                continue;
-                            }
-                            
-                        }
-                        else
-                        {
-                            errorPrint(lineBuffer);
-                            printf("Line %d: Symbol (%s) does not exist in symbol table.\n", fileIndex, operandtab);
-                            remove(objFilePath);
-                            return 1;
-                        }
-                        
-                    }
-                    else
-                    {
-                        errorPrint(lineBuffer);
-                        printf("Line %d: operand is not valid for the %s instruction\n", fileIndex, optab);
-                        remove(objFilePath);
-                        return 1;
-                    }
-                    
-
-                }
-            }
-            
-        }
-        // this executes for non-symbol definiton lines
-        else if (lineBuffer[bufferIndex] == '\t')
-        {
-            bufferIndex++;
-            alphaLen = 0;
-            alphaLen = strspn(lineBuffer + bufferIndex, alpha);
-            // check for end directive
-            if (alphaLen > 1)
-            {
-                sprintf(optab, "%.*s", alphaLen, lineBuffer + bufferIndex);
-                /*
-                printf("No sym optab: %s\n", optab);
-                */
-                if (strcmp(optab, "END") == 0 && endrecordcheck == 0)
-                {
-                    int symbolLen = strspn(lineBuffer + bufferIndex, alpha);
-                    sprintf(operandtab, "%.*s", symbolLen, lineBuffer + bufferIndex);
-                    printf("END record symbol: %s", operandtab);
-                    char *endR = malloc(sizeof(char) * 8);
-                    sprintf(endR, "R%06X", firstInstruction);
-                    fprintf(objFile, "%s\n", endR);
-                    //printf("%s\n", endR);
-                    free(endR);
-                    //free(optab)
-                    //free(operandtab)
-                    fileIndex++;
-                    endrecordcheck = 1;
-                    continue;
-                }
-            }
             else if (lineBuffer[bufferIndex] == '0')
-            {
+            {// else if check for the opcode for an instruction
                 sprintf(optab, "%.*s", 4, lineBuffer + bufferIndex);
                 /*
                 printf("optab: %s\n", optab);
@@ -1250,7 +1376,7 @@ int main(int argc, char *argv[]) {
                 alphaLen = 0;
                 alphaLen = strspn(lineBuffer + bufferIndex, alpha);
                 if (alphaLen > 1)
-                {
+                {// beginning of if check for instruction with operand
                     sprintf(operandtab, "%.*s", alphaLen, lineBuffer + bufferIndex);
                     bufferIndex += strlen(operandtab);
 
@@ -1259,13 +1385,13 @@ int main(int argc, char *argv[]) {
                     if (symbolR != NULL)
                     {
                         if (lineBuffer[bufferIndex] == ',')
-                        {
+                        {// begining of if check for indexed addressing
                             bufferIndex++;
                             if (lineBuffer[bufferIndex] == 'X')
-                            {
+                            {// checks for the X bit saying that the addressing mode is indexed
                                 //printf("Line %d: INDEXED ADDRESSING\n", fileIndex);
                                 char *textR = malloc(sizeof(char) * 69);
-                                sprintf(textR, "T%06X03%.*X%X", locCount, 2, opHex, symbolR->Address + 0x8000);
+                                sprintf(textR, "T%06X03%.*X%04X", locCount, 2, opHex, symbolR->Address + 0x8000);
                                 fprintf(objFile, "%s\n", textR);
                                 //printf("%s\n", textR);
                                 free(textR);
@@ -1273,12 +1399,12 @@ int main(int argc, char *argv[]) {
                                 //free(operandtab)
                                 fileIndex++;
                                 continue;
-                            }
-                        }
+                            }// end of if checking for the X bit saying that the addressing mode is indexed
+                        }// end of if check for indexed addressing
                         else
-                        {
+                        {// executes when the operand is not being addressed using indexed addressing
                             char *textR = malloc(sizeof(char) * 69);
-                            sprintf(textR, "T%06X03%.*X%X", locCount, 2, opHex, symbolR->Address);
+                            sprintf(textR, "T%06X03%.*X%04X", locCount, 2, opHex, symbolR->Address);
                             fprintf(objFile, "%s\n", textR);
                             //printf("%s\n", textR);
                             free(textR);
@@ -1286,19 +1412,19 @@ int main(int argc, char *argv[]) {
                             ////free(operandtab)
                             fileIndex++;
                             continue;
-                        }
+                        }// end of else when operand is not addressed using indexed addressing
                     }
                     else
-                    {
+                    {// executes when the symbol used as an operand is not found in the symbol_table
                         errorPrint(lineBuffer);
                         printf("Line %d: symbol (%s) is used but never defined.\n", fileIndex, operandtab);
                         remove(objFilePath);
                         return 1;
                     }
                     
-                }
+                }// end of if check for instruction with operand
                 else
-                {
+                {// executes when line is a no operand instruction line 
                     sprintf(operandtab, "%.*s", 6, lineBuffer + bufferIndex);
                     /*
                     printf("%s\n", operandtab);
@@ -1322,12 +1448,12 @@ int main(int argc, char *argv[]) {
                         remove(objFilePath);
                         return 1;
                     }
-                }
+                }// end of else block for no operand instruction
 
             }
             
-        }
-    }
+        }// end of if/else control block for each line
+    }// end of while loop through intermediate file
     // close open objFile
     fclose(objFile);
     

@@ -1,0 +1,140 @@
+CLOCK	START	1000            # start the program at addr 1000
+BONE   RESW     1
+BTWO   RESW     1
+TSET    RESB    1               # read the msb of the timer into here, 0 for 12hr, 1 for 24
+ZERO    WORD    0
+ONE     WORD    1
+TWO     WORD    2
+THREE   WORD    3
+FOUR    WORD    4
+MAXB    WORD    8               # max number of 
+AM	BYTE    C'A'
+PM      BYTE    C'P'
+LCD     WORD    64              # store the value of the device number for the LCD screen
+SPH     WORD    3600            # number of seconds in an hour
+SPM     WORD    60              # number of seconds in a minute
+MINS    RESW    1               # store the num of hours here
+HOURS   RESW    1               # store the num of minutes here
+MLEFT   RESW    1               
+TEN     WORD    10
+HONE    RESB    1
+HTWO    RESB    1
+MONE    RESB    1
+MTWO    RESB    1
+ZHEX    WORD    48              # decimal 48 = ascii value for 0
+MRET    RESB    4               # the return value for military time we will write to
+CVRET   RESB    5
+# SBIT is the sign bit = leftmost bit in the 24bit int representation
+SBIT    WORD    8388607         # 8388608(decimal) = 7F FFFF(hex) = 1000 0000 0000 0000 0000 0000
+PMTM    WORD    43200           # 43200(decimal) = 12*3600, denotes 12pm 
+# this is where the timer is hardwired
+TIMER   RESW    1               # reserve space for the timer
+TEMPT   WORD    8466728
+        LDA     TEMPT           # load into the accumulator the value of the last word in memory
+        STA     TIMER           # store the contents of the last word in memory into the TIMER symbol
+# start of 24 hour time       
+MILT    LDA	TIMER           # MILT is short for military time = 24 hour time
+        AND	SBIT
+        JLT	CVT             # if the sign bit isnt set to 1, we jump to the condition for 12 hour code 
+        LDA	TIMER           # reload the timer
+        DIV	SPH             # timer / 3600 = A 
+        STA     HOURS           # store as hours
+        MUL	SPH             # multipy num hours * 3600
+        STA     MLEFT           # store as mleft for use later
+        LDA	TIMER           # reload the timer val
+        SUB	MLEFT           # subtract 3600*num of hours
+        DIV	SPM             # divide by 60 to get minutes
+        STA     MINS            # store value as MINS
+        JSUB    ASCII
+        LDX	ZERO            # begin compiling the return value for military time
+        LDCH	HONE
+        STCH	MRET,X          # store HONE to the 0 index of MRET
+        LDX	ONE
+        LDCH	HTWO
+        STCH	MRET,X          # store HTWO to the 1 index of MRET
+        LDX	TWO
+        LDCH	MONE
+        STCH	MRET,X          # store MONE to the 2 index of MRET
+        LDX	THREE
+        LDCH	MTWO
+        STCH	MRET,X          # store MTWO to the 3 index of MRET
+        J	FIN             # jump to END directive
+# start of 12 hour time 
+CVT     LDA	TIMER           # CVT = civilian time = 12 hour TIMER
+        COMP	PMTM            # compare the timer value loaded in the A register with the value in PMTM = 43200
+CVPM    JLT	CVAM            # if the timer value is less than 3600*12, jump to the AM time consideration
+        LDA	TIMER           # reload timer value
+        SUB	PMTM            # subtract 3600*12 from the number of seconds to get the hour in terms of 12 hour time
+        DIV	SPH             # divide by seconds per hour
+        STA	HOURS           # store as number of hours
+        MUL	SPH
+        STA	MLEFT
+        LDA	TIMER
+        SUB	MLEFT
+        DIV     SPM
+        STA	MINS
+        JSUB	ASCII
+        LDX	ZERO            # begin compiling the return value for military time
+        LDCH	HONE
+        STCH	CVRET,X          # store HONE to the 0 index of CVRET
+        LDX	ONE
+        LDCH	HTWO
+        STCH	CVRET,X          # store HTWO to the 1 index of CVRET
+        LDX	TWO
+        LDCH	MONE
+        STCH	CVRET,X          # store MONE to the 2 index of CVRET
+        LDX	THREE
+        LDCH	MTWO
+        STCH	CVRET,X          # store MTWO to the 3 index of CVRET
+        LDX	FOUR
+        LDCH	PM
+        STCH	CVRET,X
+        J	FIN             # jump to end directive
+CVAM    LDA	TIMER
+        DIV	SPH             # divide by seconds per hour
+        STA	HOURS           # store as number of hours
+        MUL	SPH
+        STA	MLEFT
+        LDA	TIMER
+        SUB	MLEFT
+        DIV     SPM
+        STA	MINS
+        JSUB	ASCII
+        LDX	ZERO            # begin compiling the return value for military time
+        LDCH	HONE
+        STCH	CVRET,X          # store HONE to the 0 index of CVRET
+        LDX	ONE
+        LDCH	HTWO
+        STCH	CVRET,X          # store HTWO to the 1 index of CVRET
+        LDX	TWO
+        LDCH	MONE
+        STCH	CVRET,X          # store MONE to the 2 index of CVRET
+        LDX	THREE
+        LDCH	MTWO
+        STCH	CVRET,X          # store MTWO to the 3 index of CVRET
+        LDX	FOUR
+        LDCH	AM
+        STCH	CVRET,X
+        J	FIN              # jump to end directive
+# computation of ascii values for hours
+ASCII   LDA	HOURS
+        DIV	TEN
+        STA     BONE
+        ADD	ZHEX            # add the number of multiples of 10 in hours to the ascii for 0 to get ascii for tens place
+        STA     HONE            # store the first digit of the ascii code for the result
+        LDA	HOURS
+        SUB	BONE
+        ADD	ZHEX
+        STA     HTWO
+# computation of ascii values for mins
+        LDA	MINS
+        DIV	TEN
+        STA     BTWO
+        ADD	ZHEX
+        STA     MONE
+        LDA	MINS
+        SUB	BTWO
+        ADD	ZHEX
+        STA	MTWO
+        RSUB                    # returns to the location specified by the linkage register which has the addr for the JSUB call
+FIN     END 

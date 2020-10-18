@@ -1,0 +1,15 @@
+TEST	START	2000
+SRC	BYTE	C'TEST STRING'
+DST	RESB	11
+ZERO	WORD	0
+ELEVEN	WORD	11
+# loads ZERO = 0(decimal) into the index register X
+BEGIN	LDX	ZERO
+# The value of SRC + offset = X register is loaded into rightmost byte of the accumulator register A 
+MVCH	LDCH	SRC,X
+# stores the rightmost character of A into the location DST + offset = X register
+	STCH	DST,X
+# compares the value in X register to value stored in mem loc for ELEVEN = 11 (decimal) and increments X by 1 
+	TIX	ELEVEN		# sets the condition code to '<' if X register is < 11
+	JLT	MVCH		# branch to line 7 if CC = < ( line 7 loads the next character in the string)
+FIN	END
