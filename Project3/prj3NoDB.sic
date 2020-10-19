@@ -27,9 +27,10 @@ CVRET   RESB    5
 SBIT    WORD    8388607
 PMTM    WORD    43200
 TIMER   RESW    1
-TEMPT   WORD    8466728
-        LDA     TEMPT
-        STA     TIMER 
+OFFSET  WORD    497
+        LDX	OFFSET
+        LDA	CLOCK,X
+        STA     TIMER
 MILT    LDA	TIMER
         AND	SBIT
         JLT	CVT
@@ -55,6 +56,7 @@ MILT    LDA	TIMER
         LDX	THREE
         LDCH	MTWO
         STCH	MRET,X
+
         J	FIN
 CVT     LDA	TIMER
         COMP	PMTM

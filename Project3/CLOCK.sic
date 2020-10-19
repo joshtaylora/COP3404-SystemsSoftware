@@ -1,4 +1,7 @@
 CLOCK	START	1000            # start the program at addr 1000
+OFFSET  WORD    497             # only works if the size of my program is 497 bytes
+        LDX     OFFSET
+        LDA     CLOCK,X
 BONE   RESW     1
 BTWO   RESW     1
 TSET    RESB    1               # read the msb of the timer into here, 0 for 12hr, 1 for 24
