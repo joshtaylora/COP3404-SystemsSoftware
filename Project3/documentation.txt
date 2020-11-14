@@ -1,0 +1,62 @@
+============================================================================================
+-------------------------------- Project 3 by Joshua Taylor --------------------------------
+============================================================================================
+
+PROGRAM LENGTH  = 135 (in hex)
+PROGRAM START LOCATION = 007ECB 
+
+============================================================================================
+						                Overview
+============================================================================================
+Lines 1 - 16
+    After the initial START directive, the first code area is used to declare all of the word
+constants used in the program.
+
+Lines 17 - 33: Symbol
+    The next code area is used to declare all of the word-length symbols that will be defined
+later on in the program.
+
+Lines 34 - 38: Timer value loading and format checking
+    The first instruction begins on line 35 by loading in the value of the TIMER symbol which
+is located in the last word of memory.
+After the timer value has been loaded into the accumulator, a comparison instruction is
+used to check if the value is negative or positive.
+    - If the value of the timer is negative this indicates that the sign bit is set, this is
+used to indicate that the timer should be displayed using the 24 hour format.
+    If the condition code is set to indicate that the timer value indicates the 12 hour
+format, a conditional jump is performed to the routine that will handle 12-hour time.
+
+Lines 39-48: Military time conversion
+    The first step to converting the value loaded in from TIMER into the format we need to display
+for 24 hour time display is to remove the sign bit without otherwise altering the bits in 
+the accumulator. 
+    This is done by AND-ing the value in the accumulator with a word constant that was defined 
+using the decimal value indicating a 24-bit binary number that has every bit set to 1 
+except for the sign bit.
+    Once we have removed the sign bit, the value is stored in a word-length data area for later
+and we calculate the number of hours that the value specifies and store that value in
+the HOURS symbol for use later before jumping to the routine that will perform the rest 
+of the calculations.
+
+Lines 50-78: Civilian, 12-hour, time conversion
+    This code area checks if the value in TIMER that we saved is greater than the number of
+seconds that would denote the time from 12:00AM to 11:59PM. If it is greater than this value,
+we jump to a routine that will subtract 12 * (number of seconds in an hour) from the saved 
+timer value so that we can display the number in 12 hour format. A format word is set to 
+indicate that this is done.
+    At the end of the am and pm time considerations we divide the value in SAVED by 3600 and
+jump to the CALC subroutine.
+
+Lines 79-120: Output
+    Perform the proper calculations needed to split the saved HOURS and MINS values into their
+respective 10s and 1s place components and add the ascii decimal value for 0 to each place before
+displaying them so that we are displaying the correct ascii codes. If the format word was set to
+indicate we are using 12 hour time display settings, we continue on to check the CVFORM symbol 
+which has the corresponding value for the A or P ascii code depending on which time of the day 
+the timer indicated.
+    If the time format is 24 hour we jump straight to the halting subroutine after outputing to
+the device the 4 digits we needed to.
+
+Lines 121-125: Halt
+    This is a simple subroutine that notifies the SICVM system that execution needs to be stopped
+and to return control to the parent process.

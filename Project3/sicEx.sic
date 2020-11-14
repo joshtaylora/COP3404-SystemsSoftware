@@ -1,0 +1,11 @@
+EXSIC   START   7000
+ONE     WORD    1
+TWO     WORD    2
+THREE   WORD    3
+X       RESW    1
+Y       RESW    1
+BEGIN   LDA     X       # Load X into the A register
+        ADD     ONE     # add the value of ONE = 1 to the contents of the A register ( X += 1 == 1)
+        ADD     TWO     # add the value of TWO = 2 to the contents of the A register ( X += 2 == 3)
+        STA     Y   # store the contents of the A register into the location specified by Y
+

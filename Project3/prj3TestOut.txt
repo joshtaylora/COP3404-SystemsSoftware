@@ -1,0 +1,102 @@
+lda TIMER = 007ffd (A) = 80EE98
+
+sta SAVED = 007ee6  (A) = FF80EE98 
+
+cmp ZERO = 007ea7
+
+jgt CVT = 007f3a (CC = < )
+
+lda SAVED = 007ee6
+
+and SBIT = 007ebf 
+
+sta SAVED = 007ee6
+
+div SPH = 007eb0 (A) = 61080
+
+sta HOURS = 007ed4 (A) = 16
+
+mul SPH = 007eb0 (A) = 16
+
+sta MLEFT = 007ed7 (A) = 57600
+
+lda SAVED = 007ee6 (A) = 57600
+
+sub MLEFT = 007ed7 (A) = 61080
+
+div SPM = 007eb9 (A) = 3480
+
+sta MINS = 007ed1 (A) = 58
+
+lda HOURS = 007ed4 (L) = 007f19
+
+div TEN = 007ec5 (A) = 16
+
+sta BONE = 007ec8 (A) = 1
+
+add ZHEX = 007ebc (A) = 1
+
+sta HONE = 007eda (A) = 49
+
+lda HOURS = 007ed4 (A) = 49
+
+sub BONE = 007ec8 (A) = 16
+
+add ZHEX = 007ebc (A) = 15
+
+sta HTWO = 007edd (A) = 63
+
+lda MINS = 007ed1 (A) = 63
+
+div TEN = 007ec5 (A) = 58
+
+sta BTWO = 007ecb (A) = 5
+
+add ZHEX = 007ebc (A) = 5
+
+sta MONE = 007ee0 (A) = 53
+
+lda HONE = 007eda (A) = 53
+
+sub BTWO = 007ecb (A) = 58
+
+add ZHEX = 007ebc (A) = 53
+
+sta MTWO = 007ee3 (A) = 101
+
+rsub ta = 000000 (L) = 007f19 = MTOUT
+
+td LCD = 007ead  (A) = 101
+
+jeq MTOUT = 007f19 (CC) = <
+
+lda HONE = 007eda (A) = 101
+
+wd LCD = 007ead  (A) = 49
+
+lda HWTO = 007edd (A) = 49
+
+wd LCD   = 007ead (A) = 63
+
+lda MONE = 007ee0 (A) = 63
+
+wd LCD  = 007ead (A) = 53
+
+lda MTWO = 007ee3 (A) = 53
+
+wd LCD  = 007ead (A) = 101
+
+j  FIN  = 007ff4 (PC) = 007f37 
+
+ldl ZERO = 007ea7 (PA) = 007ff4, (L) = 007f19
+
+rsub ta = 00000 (L) = 00000, (PC) = 007ff7
+
+PROGRAM HALTED
+
+DEVICE 64 output: 1?5e
+
+
+
+
+

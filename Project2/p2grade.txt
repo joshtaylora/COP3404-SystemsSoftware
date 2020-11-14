@@ -1,0 +1,241 @@
+[scottp@cisvm-softeng1 project2]$ ./clean
+[scottp@cisvm-softeng1 project2]$ unshar n01375463
+n01375463:
+x - created lock directory _sh538845.
+x - extracting makefile (text)
+x - extracting documentation.txt (text)
+x - extracting project2.c (text)
+x - removed lock directory _sh538845.
+[scottp@cisvm-softeng1 project2]$ ./grade
+----------------------------------------------------------------
+----------------------------------------------------------------
+Project 1 - SIC Assembler Pass 1
+
+==============================================================================================================
+                                         Structs and Types
+==============================================================================================================
+1) Symbol: This custom type is used as a structure to represent the symbols we wil be storing in the symbol
+    table.
+    Data Members:
+        - char *Name: a pointer to a character array that stores the name of the symbol (the space for Name is
+            allocated when the symbol is added to the table)
+        - int Address: and integer value storing the address of the location counter when the symbol was added
+            to the table
+        - int SourceLineNumber: an integer value that stores the line that the symbol was defined on in the
+            source SIC program file
+        - struct Symbol *next: a pointer to the next Symbol struct in the linked list representing symbols whose
+            with Name field has the same first letter
+
+2) SymbolTable: This type is used as a structure to point to an array of Symbol structs. The SymbolTable
+    struct points to the linked lists for each letter that a symbol can start with.
+    Data Members:
+        - Symbol **TableEntries: a pointer that points to Symbol pointers. This acts as an array indexed by the
+            ASCII codes for uppercase letters with each index acting as a linked list for symbols all with the
+            same first letter in their Name
+==============================================================================================================
+                                            Functions
+==============================================================================================================
+1) ST_create: allocates the memory needed to make the symbol table and sets all of the Symbol
+    pointers to (null) so we can easily check if an index in the symbol table has already been filled.
+
+2) Symbol_alloc: allocates memory for the data members of a Symbol object before it is added to the symbol
+    table after that symbol has been verified as being unique.
+
+3) ST_set: looks for the first available spot in the symbol table that the symbol can be added to and if the
+    base index that stores symbols with the first letter of that symbol is already occupied, it will loop through
+     the linked list at that index and insert at the first available spot.
+
+4) ST_get: looks for the symbol in the symbol table that matches the Name data member of a symbol and returns
+    that entry if it is found, otherwise it returns NULL.
+
+5) isDirective: checks if the character string called opcode is a valid directive opcode. Returns 1 if so and
+    0 if it is not valid.
+
+6) calcByte: a helper function for the calcDirective function that calculates the correct location counter
+    address for the BYTE directive.
+
+7) calcDirective: a function that calculates the correct location counter for each valid directive.
+==============================================================================================================
+                                         How does it work?
+==============================================================================================================
+Upon succesfully opening a SIC program file, the assembler creates a symbol table and begins reading each
+line and parsing them for symbol definitions to store the symbols in a symbol table for use in pass 2.
+
+As the assembler encounters a symbol definition line in the SIC file, the assembler uses the ST_get function
+to look through the symbol table to check for any duplicate symbols. If the symbol is not in the symbol table
+already it will be added, otherwise an error is printed and the program exits.
+
+While parsing through each line, the assembler verifies that each line matches the format for valid
+directive and instruction lins for a SIC program and calculates the correct address in which the location counter
+pointed to at the time that a line was read.
+
+If the assembler reaches the end of the file without encountering an error, the complete symbol table will be
+saved in the symbol_table SymbolTable variable.
+
+After the end of the file has been reached, the size of the file is computed and saved to a variable for use
+in pass 2.
+
+
+
+
+==============================================================================================================
+==============================================================================================================
+
+                                    Project 2 - Pass 2 for SIC Assembler
+
+==============================================================================================================
+                                        Intermediate File Reading
+==============================================================================================================
+The second pass of the assembler starts by closing and then immediately reopening the 'output.txt' file that
+is an intermediate file produced by the first pass of the assembler. Instead of writing to this file like we
+did in pass 1, in pass 2 we open it in read mode and read through it line by line.
+
+Each line in the intermediate file is formated in the following way:
+    Directive - Symbol Definition
+    [location-counter-address]\t[symbol-name]\t[directive]\t[operand]\n
+
+    Directive - No Symbol Definition
+    [location-counter-address]\t\t[directive]\t[operand]\n
+
+    Instruction - Symbol Definition
+    [location-counter-address]\t[symbol-name]\t[instruction-opcode]\t[operand]\n
+
+    Instruction - No Symbol Definition
+    [location-counter-address]\t\t[instruction-opcode]\t[operand]\n
+
+    Instruction - No Symbol Definition and No Operand (example: RSUB does not require an operand)
+    [location-counter-address]\t\t[instruction-opcode]\t\n
+
+    - The square brackets in the above lines are not present in the intermediate file and are shown in the line
+        format above only to increase readability
+    - The Instruction opcodes are substituted in place of the Instruction Mnemonics during pass 1 of the assembler
+    - Outside of the operand for Byte character constants, there are no spaces present in the intermediate file
+    - Each token type in a line is separated by a tab character (\t)
+    - Comment lines from the source file are replaced in the intermediate file with a line that consists only of
+        the # character followed immediately by the newline character \n to preserve original line numbering from
+        the source file
+
+==============================================================================================================
+                                                How it Works
+==============================================================================================================
+While we have not reached the end of the intermediate file, for each line the assembler reads in the location
+    counter address and stores it in a string called locChar that is then converted into a base 16 int called
+    locCount.
+Each line is parsed into tokens that represent a symbol/label, an opcode/directive, and an operand.
+
+Line 951: If the header record has not been created yet, the first if statement in the while loop checks for this
+    condition. It reads the alpha characters in the line corresponding to the program label and stores them
+    in a string called labeltab.Then, the characters corresponding to the directive/opcode are stored in a
+    string called optab which is compared with the string "START" to ensure that the start directive is in
+    this line. At this point, the header record is created using the name of the program, the starting address
+    for the program (locCount), and the size of the program (programSize). Once the string for the header
+    record has been created, we write this to the object file and move on to the next line.
+
+Line 980: Once the header record has been created, the first else if after the if statement checks that that
+    condition is true and that the first character after the program counter in the intermediate file is not a
+    tab character (\t) -> this occurs when the line is a symbol definition line.
+    We first count the number of characters in the line after the location counter that are a contiguous
+    collection of uppercase alpha characters. We then store that many characters from the current index in the
+    line into a string called labeltab. We then count the number of characters after we index past the symbol
+    part on the line that are uppercase alpha characters and store that number into a variable called alphaLen
+    that will be used to check for a directive in the line.
+
+    Line 989: If alphaLen is greater than 1, we store the characters in the line from the current index up to
+        alphaLen into a string called optab
+        Line 995: We call the isDirective function and pass the optab string to it. If it is trur we then compare it
+            to the BYTE, WORD, and END directives (the only directives that warrant the creation of their own
+            records) and create the appropriate Text or End record.
+
+    Line 1136: This is an else block that executes when the token in the directive/opcode part of the line contains
+        less than 1 alpha character immediately following the tab after the symbol name. This (in a correct SIC
+        file) indicates an instruction opcode is what is in this part of the line. We then check that the value
+        stored at the current index in the line is the 0 character (all opcodes are stored in the line as hex
+        values beginning with 0x followed by the appropriate 2 digit hex value for that instruction).
+        If that condition is met, we read in 4 characters from the current index and store that as a string called
+        optab that is then converted into a hex int called opHex.
+
+        Line 1146: This line checks that the value in the operand is a contiguous set of uppercase alpha characters
+            (indicating a symbol) and if that set contains more than 1 element, the if block at the next line
+            exeucutes which begins with storing the operand symbol into the string called operandtab and then
+            searching the symbol table created in pass 1 (called symbol_table) for a symbol with the name stored
+            in operandtab. If that symbol exists in the table, we check if it is being addressed using the indexed
+            addressing mode
+
+            Line 1155: This line checks that the character after the symbol name is a ',' character and then that the
+            character following the comma is the 'X' character indicating indexed addressing mode. If these are both
+            true, the text record for the line is created with the symbol's address being incremented by 0x8000 to
+            indicate the indexed addressing mode.
+
+            Line 1173: This line executes if indexed addressing is not being used and creates the Text record using the
+            location counter (locCount), opcode (opHex), and operand symbol's address (symbolR->Address)
+
+Line 1212: This line contains the condition check for an else if block that executes when the line is not a symbol
+    definition line. The condition checks that the header record has been created (headerCheck == 1), and that the
+    character at the index following the tab character after the location counter value in the line is equal to '\t'.
+    If these are true, we index in the line past the '\t' char and count the number of contiguous uppercase alpha
+    characters so that we can check for a directive.
+
+    Lines 1218 through 1366: perform the same function as the if block on line 989 -> checking for a valid directive
+        within the directive/opcode part of the line and then creating the appropriate Text or End record for it, if
+        applicable.
+
+    Lines 1367 through 1452: Function identically to the block starting on line 1136 -> check that the directive/opcode
+        part of the line contains an opcode and then create the appropriate text record making sure to account for
+        indexed addressing if it is being used.
+
+Once all of the lines in the intermediate file for the SIC program file have been read and the appropriate records have
+    been written to the obj file, the intermediate file (outputFile) and the obj file we created (objFile) are closed and
+    we return 0, ending execution of the assembler.
+*****************************************************************************************************************************
+If an error occurs in pass 2 of the assembler, the objfile removes the obj file it was writing to and displays an appropriate
+    error message
+    Possible Error: the symbol being used as an operand is used in the SIC file but has not been defined already
+******************************************************************************************************************************
+----------------------------------------------------------------
+Running Make
+gcc -o project2 project2.c
+
+
+----------------------------------------------------------------
+Testing with Correct SIC Assembly
+----------TEST 21 Object File-------------------------------------------
+----------------------------------------------------------------
+Testing case 2 SIC Program to copy a string using indexed addressing
+----------TEST 22 Object File-------------------------------------------
+----------------------------------------------------------------
+Testing case 3 SIC Program Has Invalid Hex Constant
+Line 38: improper hex constant allocation: F1AG
+----------------------------------------------------------------
+Testing case 4 SIC Program HasSymbol Name that is an assembler Directive BYTE
+Line 29: symbol (BYTE) name cannot be a directive name
+----------------------------------------------------------------
+Testing case 5 SIC Program Missing START DIRECTIVE
+ASSEMBLY ERROR: SRC     BYTE    C'TEST STRING'Line 6: START directive not encountered before first directive/instruction
+test25.sic.obj: No such file or directory
+----------------------------------------------------------------
+Testing case 6 Long Byte Constant that is ok
+ASSEMBLY ERROR: 401F            0x50    SRCA,X
+Line 11: symbol (SRCA) is used but never defined.
+----------------------------------------------------------------
+Testing case 7
+ASSEMBLY ERROR: 401C    LOOP    0x04    ZEROO
+Line 10: Symbol (ZEROO) does not exist in symbol table.
+----------TEST 27 Object File-------------------------------------------
+test27.sic.obj: No such file or directory
+----------------------------------------------------------------
+Testing case 8
+ASSEMBLY ERROR: 4052    FIN     END     LOOPA
+Line 15: Symbol (LOOPA) is used but is never defined
+----------TEST 28 Object File-------------------------------------------
+----------------------------------------------------------------
+Testing case 9
+----------TEST 29 Object File-------------------------------------------
+----------------------------------------------------------------
+Testing case 10
+----------TEST 30 Object File-------------------------------------------
+
+Nice and extensive  documentation (+25)
+
+All tests passed
+
+125/100

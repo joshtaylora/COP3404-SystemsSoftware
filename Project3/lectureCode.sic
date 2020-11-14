@@ -1,0 +1,40 @@
+CLOCK   START   1000
+        LDA     TIMER
+        STA     SAVED
+        CMP     ZERO            # check if the value in the last word is negative indicating its in 24hr time
+        JGT     TWELV           # skip ADJUST if the  number is in 12hr time
+# adjusts the timer value to remove the MSB and 
+ADJST   LDA	SAVED
+        MUL	TWO             # shift left (removes MSB)
+        DIV	TWO             # logical right shift (returns bits to their origina position)
+        STA	SAVED           # save the converted value to the SAVED symbol
+        LDA	ONE             # load 1 into the accumulator
+        STA     FRMAT           # log that we are using 24hr time
+        J	DOIT            # jump to subr that
+# subroutine that is invoked when the MSB is not set
+TWELV   LDA	ZERO
+        STA	FRMAT           # log that we are using 12hr time
+# beginning of conversion
+DOIT    LDA	SAVED           # here we start our calculations
+        DIV	SPH
+        STA	HOURS
+        MUL	SPH
+        STA	DIVR
+        LDA	SAVED
+        SUB	DIVR
+        DIV	SPM
+        STA	MINS
+MINL
+ZERO    WORD    0
+ONE     WORD    1
+TWO     WORD    2
+TWLVE   WORD    12
+HCMP    WORD    3599
+SPH     WORD    3600
+SPM     WORD    60
+DIVR	RESW    1
+FRMAT   RESW    1
+CVTED   RESW    1
+HOURS   RESW    1
+MINS    RESW    1
+SAVED   RESW    1               # Captured timer value at program start.

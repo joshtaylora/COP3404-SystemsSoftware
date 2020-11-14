@@ -1,0 +1,142 @@
+#calculate start address after program is written
+CLOCK	START	7EBF
+#device id 64
+DEVICE	WORD	64
+#saves the constants 3600, 60, 10, 12, 13, 2, 1
+FACTOR	WORD	3600
+SMOL	WORD	60
+TEN		WORD	10
+TWELVE	WORD	12
+THIRTE	WORD	13
+TWO		WORD	2
+ONE		WORD	1
+#ASCII code constants for P and A for 12 hour format
+AM		WORD	65
+PM		WORD	80
+#ASCII conversion factor
+ASCII	WORD	48	
+#creates the variables SAVED, CALC, HOUR, SECHR, and MINUTE
+#SAVED will store the value of timer without the most significant bit
+#CALC is used to perform calculations, but the stored value can be overwritten at any time
+SAVED	RESW	1
+CALC	RESW	1
+HOUR	RESW	1
+SECNHR	RESW	1
+MINUTE	RESW	1
+#create a variable to store whether clock is in 24hr(2), or 12hr(1)
+STORE	RESB	1
+#create a variable to store whether clock is in AM(2) or PM(1)
+AMPM	RESB	1
+#check 12 or 24 hour time(assume 24 hour unless otherwise)
+FORMAT	LDA		TWO
+		STA		STORE
+		LDA		TIMER
+		COMP	ZERO
+		JLT		SHIFT
+#changes STORE variable to 12 hour time
+		LDA		ONE
+		STA		STORE
+#remove most significant bit
+SHIFT	LDA		TWO
+		MUL		TIMER
+		STA		SAVED
+#start the math functions
+#store the value of SAVED into CALC
+BEGIN	LDA		SAVED
+		STA		CALC
+#find hours since midnight; store in HOUR
+		LDA		CALC
+		DIV		FACTOR
+		STA		HOUR
+#find the leftover seconds after finding HOUR; store in SECNHR (seconds in hours)
+		MUL		FACTOR
+		STA		SECNHR
+#subtract SECNH from SAVED; store in CALC
+		LDA		SAVED
+		SUB		SECNHR
+		STA		CALC
+#find minutes since midnight; store in MINUTE
+		LDA		CALC
+		DIV		SMOL
+		STA		MINUTE
+#convert HOUR and MINUTE to ASCII
+#define ASCII variables
+HOURA	RESB	1
+HOURB	RESB	1
+MINA	RESB	1
+MINB	RESB	1
+#check time format for HOUR, if 24 then jump to CONVTH
+CHECKA	LDA		STORE
+		COMP	TWO
+		JEQ		CONVTH
+#check if morning or night
+		LDA		HOUR
+		COMP	TWELVE
+		JLT		SETA
+		JEQ		SETP
+		SUB		THIRTE
+		STA		HOUR
+		J		SETP
+SETA	LDA		TWO
+		STA		AMPM
+		J		CONVTH
+SETP	LDA		ONE
+		STA		AMPM
+#break HOUR into tens(A) and ones(B) place, convert to ASCII
+CONVTH	LDA		HOUR
+		DIV		TEN
+		STA		HOURA
+		MUL		TEN
+		STA		CALC
+		LDA		HOUR
+		SUB		CALC
+		ADD		ASCII
+		STA		HOURB
+		LDA		HOURA
+		ADD		ASCII
+		STA		HOURA
+#break MINUTE into tens(A) and ones(B) place, convert to ASCII	
+CONVTM	LDA		MINUTE
+		DIV		TEN
+		STA		MINA
+		MUL		TEN
+		STA		CALC
+		LDA		MINUTE
+		SUB		CALC
+		ADD		ASCII
+		STA		MINB
+		LDA		MINA
+		ADD		ASCII
+		STA		MINA
+#write result to output device
+OUTLP	TD		DEVICE
+		JEQ		OUTLP
+		LDA 	HOURA
+		WD		DEVICE
+		LDA 	HOURB
+		WD		DEVICE
+		LDA		MINA
+		WD		DEVICE
+		LDA		MINB
+		WD		DEVICE
+#check if 12 hour time and whether A or P should be written
+		LDA		STORE
+		COMP	TWO
+		JEQ		ZERO
+		LDA		AMPM
+		COMP	TWO
+		JEQ		PRINTA
+		JLT		PRINTP
+PRINTA	LDA		AM
+		WD		DEVICE
+		J		ZERO
+PRINTP	LDA		AM
+		WD		DEVICE
+#program halt
+ZERO	WORD	0
+		LDL		ZERO
+		RSUB
+		J		ENDING
+#needs to align with memory location 7FFD
+TIMER	RESW	1
+ENDING	END		BEGIN

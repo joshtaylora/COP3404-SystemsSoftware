@@ -1,0 +1,6 @@
+7EBE    CLOCK   START   7EBE
+7EBE    ZERO    WORD    1
+7EC1    LCD     WORD    64
+7EC4    SPH     WORD    3600
+7EC7
+7ECA

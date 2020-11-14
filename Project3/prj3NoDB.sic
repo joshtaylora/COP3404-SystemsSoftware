@@ -1,136 +1,119 @@
-CLOCK	START	7000
-BONE   RESW     1
-BTWO   RESW     1
-TSET    RESB    1
+CLOCK	START   7EA7
 ZERO    WORD    0
 ONE     WORD    1
-TWO     WORD    2
-THREE   WORD    3
-FOUR    WORD    4
-MAXB    WORD    8
-AM	BYTE    C'A'
-PM      BYTE    C'P'
-LCD     WORD    64
+LCD     WORD    64           # device number for LCD we need to output to is decimal 60 = hex 40
 SPH     WORD    3600
+AM      WORD    65
+PM      WORD    80
 SPM     WORD    60
+ZHEX    WORD    48
+SBIT    WORD    8388607
+PMTM    WORD    43200
+TEN     WORD    10
+# memory block reservations
+BONE    RESW    1
+BTWO    RESW    1
+CVCC    RESW    1
 MINS    RESW    1
 HOURS   RESW    1
 MLEFT   RESW    1               
-TEN     WORD    10
-HONE    RESB    1
-HTWO    RESB    1
-MONE    RESB    1
-MTWO    RESB    1
-ZHEX    WORD    48
-MRET    RESB    4
-CVRET   RESB    5
-SBIT    WORD    8388607
-PMTM    WORD    43200
-TIMER   RESW    1
-OFFSET  WORD    497
-        LDX	OFFSET
-        LDA	CLOCK,X
-        STA     TIMER
-MILT    LDA	TIMER
-        AND	SBIT
-        JLT	CVT
-        LDA	TIMER
+HONE    RESW    1
+HTWO    RESW    1
+MONE    RESW    1
+MTWO    RESW    1
+SAVED   RESW    1
+# starts the consideration for military time if msb set or jumps to cvt
+BEGIN   LDA	TIMER
+        COMP    ZERO
+        JGT	CVT
+MILT    AND     SBIT
+        STA     SAVED
         DIV	SPH
         STA     HOURS
         MUL	SPH
         STA     MLEFT
-        LDA	TIMER
+        LDA	SAVED
         SUB	MLEFT
         DIV	SPM
         STA     MINS
         JSUB    ASCII
-        LDX	ZERO  
-        LDCH	HONE
-        STCH	MRET,X
-        LDX	ONE
-        LDCH	HTWO
-        STCH	MRET,X
-        LDX	TWO
-        LDCH	MONE
-        STCH	MRET,X
-        LDX	THREE
-        LDCH	MTWO
-        STCH	MRET,X
-
+# military time output subroutine
+MTOUT   TD	LCD             # test the LCD device
+        JEQ	MTOUT           # loop if the device is not ready
+        LDA     HONE
+        WD	LCD
+        LDA     HTWO
+        WD      LCD
+        LDA     MONE
+        WD      LCD
+        LDA     MTWO
+        WD      LCD
         J	FIN
-CVT     LDA	TIMER
+# 12 hour time
+CVT     STA	SAVED
         COMP	PMTM
 CVPM    JLT	CVAM
-        LDA	TIMER
+        LDA     PM
+        STA     CVCC
+        LDA	SAVED
         SUB	PMTM
         DIV	SPH
-        STA	HOURS
-        MUL	SPH
-        STA	MLEFT
-        LDA	TIMER
-        SUB	MLEFT
+        STA	    HOURS
+        MUL	    SPH
+        STA	    MLEFT
+        LDA	    SAVED
+        SUB	    MLEFT
         DIV     SPM
-        STA	MINS
-        JSUB	ASCII
-        LDX	ZERO
-        LDCH	HONE
-        STCH	CVRET,X
-        LDX	ONE
-        LDCH	HTWO
-        STCH	CVRET,X
-        LDX	TWO
-        LDCH	MONE
-        STCH	CVRET,X
-        LDX	THREE
-        LDCH	MTWO
-        STCH	CVRET,X
-        LDX	FOUR
-        LDCH	PM
-        STCH	CVRET,X
-        J	FIN
-CVAM    LDA	TIMER
-        DIV	SPH
-        STA	HOURS
-        MUL	SPH
-        STA	MLEFT
-        LDA	TIMER
-        SUB	MLEFT
+        STA	    MINS
+        JSUB	  ASCII
+        J	      COUT
+CVAM    LDA	    AM
+        STA     CVCC
+        LDA     SAVED
+        DIV	    SPH
+        STA	    HOURS
+        MUL	    SPH
+        STA	    MLEFT
+        LDA	    SAVED
+        SUB	    MLEFT
         DIV     SPM
-        STA	MINS
-        JSUB	ASCII
-        LDX	ZERO
-        LDCH	HONE
-        STCH	CVRET,X
-        LDX	ONE
-        LDCH	HTWO
-        STCH	CVRET,X
-        LDX	TWO
-        LDCH	MONE
-        STCH	CVRET,X
-        LDX	THREE
-        LDCH	MTWO
-        STCH	CVRET,X
-        LDX	FOUR
-        LDCH	AM
-        STCH	CVRET,X
-        J	FIN
-ASCII   LDA	HOURS
-        DIV	TEN
+        STA	    MINS
+        JSUB	  ASCII
+        J	      COUT
+COUT    TD	    LCD
+        JEQ	    COUT
+        LDA     HONE
+        WD      LCD
+        LDA     HTWO
+        WD      LCD
+        LDA     MONE
+        WD      LCD
+        LDA     MTWO
+        WD      LCD
+        LDA     CVCC
+        WD      LCD
+        J       FIN
+ASCII   LDA	    HOURS
+        DIV	    TEN
         STA     BONE
-        ADD	ZHEX
+        ADD	    ZHEX
         STA     HONE
-        LDA	HOURS
-        SUB	BONE
-        ADD	ZHEX
+        LDA	    HOURS
+        SUB	    BONE
+        ADD	    ZHEX
         STA     HTWO
-        LDA	MINS
-        DIV	TEN
+        LDA	    MINS
+        DIV	    TEN
         STA     BTWO
-        ADD	ZHEX
+        ADD	    ZHEX
         STA     MONE
-        LDA	MINS
-        SUB	BTWO
-        ADD	ZHEX
-        STA	MTWO
-        RSUB                    
-FIN     END 
+        LDA	    MINS
+        SUB	    BTWO
+        ADD	    ZHEX
+        STA	    MTWO
+        RSUB
+FIN     LDL     ZERO
+        RSUB
+        J       OVER
+TIMER   RESW            1                    
+OVER    END     BEGIN
