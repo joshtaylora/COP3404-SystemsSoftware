@@ -5,9 +5,9 @@
 #include "prj4defs.h"
 
 #ifdef DEBUG
-#define LOG_LABEL(x) printf("LABEL: %s", x)
-#define LOG_OPCODE(x) printf("OPCODE: %s", x)
-#define LOG_OPERAND(x) printf("OPERAND: %s", x)
+#define LOG_LABEL(x) printf("LABEL: %s\n", x)
+#define LOG_OPCODE(x) printf("OPCODE: %s\n", x)
+#define LOG_OPERAND(x) printf("OPERAND: %s\n", x)
 #else
 #define LOG_LABEL(x)
 #define LOG_OPCODE(x)

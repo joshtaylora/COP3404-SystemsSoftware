@@ -221,10 +221,8 @@ void errorPrint(char* line)
 
 int isDirective(char *possibleDirec)
 {
-    /* Checking for START is reduntant because we must first check for it in the program before any other directive
     // START - specifies the name and starting address of program, routine, or library
-    if (strcmp(possibleDirec, "START")) { return 1; }
-    */
+    if (strcmp(possibleDirec, "START") == 0) { return 1; }
     // END - Indicates the end of the program and (optionally) specifies the first executable 
     //      instruction on the program
     if (strcmp(possibleDirec, "END") == 0) { return 1; }

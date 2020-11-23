@@ -109,7 +109,7 @@ int main(int argc, char** argv)
                     // count the number of characters used to represent the index
                     oprndLength = strspn(line + lineIndex, hex);
                     // GET THE START ADDRESS & CHECK THAT THE ADDRESS ISNT TOO MANY CHARACTERS
-                    if (oprndLength > 0 && oprnLength <= 6)
+                    if (oprndLength > 0 && oprndLength <= 6)
                     {
                         strncpy();
                     }
