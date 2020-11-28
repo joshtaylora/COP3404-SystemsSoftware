@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="CLionExternalBuildManager">
+    <target id="2e466245-ab9d-472f-9f63-a9c816646006" name="Project4Debug" defaultType="MAKE">
+      <configuration id="d5d9db68-e136-4b51-aa7e-ac6bbaf14f40" name="Project4Debug" toolchainName="WSL">
+        <build type="MAKE">
+          <make targetName="debug" />
+        </build>
+        <clean type="MAKE">
+          <make targetName="clean" />
+        </clean>
+      </configuration>
+    </target>
+  </component>
+</project>
