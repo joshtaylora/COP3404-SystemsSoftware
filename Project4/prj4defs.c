@@ -30,9 +30,9 @@ Instruction* Instruction_Alloc(char* opName, int opHex, int* formats)
 OpcodeTable* OPTAB_create(void)
 {
     // allocate memory for the OpcodeTable itself
-    OpcodeTable *OPTAB = malloc(sizeof(OpcodeTable) * 1);
+    OpcodeTable *OPTAB = calloc(1, sizeof(OpcodeTable));
     // allocate memory for the size of the array of Instructions
-    OPTAB->Instructions = malloc(sizeof(Instruction*) * OPTAB_SIZE);
+    OPTAB->Instructions = calloc(OPTAB_SIZE, sizeof(Instruction*));
     
     int* form1 = (int *)calloc(1, sizeof(int));
     form1[0] = 1;
@@ -132,7 +132,7 @@ SymbolTable *ST_create( void ) {
 
     // set each entry in the table to null so that we can search for empty indeces in the table to insert
     int i = 0;
-    for (; i < SYMTAB_SIZE - 9; i++) {
+    for (; i < SYMTAB_SIZE; i++) {
         hashtable->TableEntries[i] = NULL;
     }
 
@@ -188,7 +188,7 @@ void ST_set( SymbolTable *hashtable, char *name, int address, int sourceline) {
     
 }
 
-Symbol *ST_get(SymbolTable *hashtable, char *name) {
+Symbol *ST_get(SymbolTable *hashtable, const char *name) {
     //printf("\tST_get: name: %s\taddress: %d\tsource line: %d\n", name, *address, *sourceline);
     unsigned int tableIndex = name[0] - 65;
 
@@ -263,10 +263,6 @@ AddrModeTable* AMT_create(void) {
     return table;
 }
 
-InstructionLine* IL_Create(int lineNum, int location, char* sourceLine, char* label, char* opcode, char* operand) {
-
-}
-
 void errorPrint(char* line) {
     printf("ASSEMBLY ERROR:\t%s", line);
     return;
@@ -279,49 +275,115 @@ void DocumentError(int errorCode, char* line, int lineNumber, char* label, char*
 
 }
 
-int getInstructionFormat(Instruction* opcode, char* operand) {
-    int returnFormat = 0;
-    char opcodeFormat = opcode->mnemonic[0];
-    char operandFormat = operand[0];
+const char* format4ObjCode(OpcodeTable* optab, SymbolTable* symtab, char* opcodeStr, char* operandStr)
+{
+    // create buffer to store the opcode without the format 4 indicator, '+'
+    char* opcode = (char *)calloc(strlen(opcodeStr), sizeof(char));
+    strcpy(opcode, opcodeStr+1);
+    printf("Inside of format4ObjCode, opcode: %s\n", opcode);
+    return opcode;
+}
+
+const char* getObjCode(OpcodeTable* optab, Symbol* symbol, char* opcodeStr, char* operandStr) {
+    int constFormFlagBits = 0x00;
+    int pcRelativeFlagBits = 0x20;
+    int baseRelativeFlagBits = 0x40;
+    int constFormIndexFlagBits = 0x80;
+    int extendedFormIndexFlagBits = 0x90;
+    int pcRelativeIndexFlagBits = 0xA0;
+    int baseRelativeIndexFlagBits = 0xC0;
+    int sicIndexFlagBits = 0x8;
+
+    char opcodeFormat = opcodeStr[0];
+    char operandFormat = operandStr[0];
 
     const char* hexPattern = "1234567890ABCDEF";
-    int intConstantLength = strspn(operand, hexPattern);
-    int operandLength = strlen(operand);
-    
-    //printf("0x%02X", opcode->opcode);
-    
-    int instrForm = opcode->format[0];
-    // if the instruction is not a format 4 instruction
-    if (opcodeFormat != '+') {
-        
-        switch(instrForm) {
-            case(1):
-                if ((operandFormat == '@') || (operandFormat == '#')) {
-                    returnFormat = 0;
-                } else {
-                    returnFormat = 1;
-                } break;
-            case(2):
-                if ((operandFormat == '@') || (operandFormat == '#')) {
-                    returnFormat = 0;
-                } else {
-                        returnFormat = 2;
-                } break;
-            case(3):
-                returnFormat = 3;
-                break;
-            default:
-                returnFormat = 0;
-                break;
-        }        
-    } else {
-        if ((opcode->format[1]) == 4) {
-            returnFormat = 4;
-        } else {
-            returnFormat = 0;
+    int opcodeStrLen = strlen(opcodeStr);
+    int operandStrLen = strlen(operandStr);
+    char* objCode = (char *)calloc(50, sizeof(char));
+    if (opcodeFormat == '+') {
+         /* Format 4 instruction */
+        // copy the string into a temporary buffer
+        char* buff = (char *)calloc(strlen(opcodeStr), sizeof(char));
+        strcpy(buff, opcodeStr + 1);
+        // free the opcodeStr so we can redefine it to the proper opcode string
+        // allocate memory for the new string
+
+        // grab the instruction
+        Instruction* instruction = OPTAB_Search(optab, opcodeStr + 1);
+
+        if ((instruction->format[1]) != 4) {
+            // instruction does not support format 4
+            return "null";
         }
+        else {
+            if (operandStr[0] == '#') {
+                // copy the operand to a new string without the '#' character
+                char* operandNoForm = (char *)calloc(strlen(operandStr), sizeof(char));
+                strcpy(operandNoForm, operandStr+ 1);
+
+                // immediate addressing
+                int objCodeOpCode = instruction->opcode + 0x01;
+                int numLength = strcspn(operandStr, "1234567890");
+
+                if (numLength > 0) {
+                    // reserve the string that we will be returning
+                    char* objCodeStr = (char *)calloc(50, sizeof(char));
+
+                    int objCodeTA = symbol->Address;
+
+                    int flagBits  = 0x20;
+                    sprintf(objCodeStr, "%02X%01X%05X", objCodeOpCode, flagBits, objCodeTA);
+                    for (int i = 0; i < strlen(objCodeStr); i++) {
+                        objCode[i] = objCodeStr[i];
+                    }
+                    //strcpy(objCodeReturn, objCodeStr);
+                    printf("\n\nIMMEDIATE ADDR INSTRUCTION OBJCODE: %s\n\n", objCodeStr);
+                    return objCode;
+                }
+                else {
+
+                    char* objCodeStr = (char *)calloc(strlen(operandNoForm) * 2, sizeof(char));
+
+                    int len = strlen(operandNoForm);
+                    char* hex = (char *)calloc(1 + len * 2, sizeof(char));
+                    hex[0] = '0';
+                    hex[1] = 'x';
+                    int index = 2;
+                    int x;
+                    for (x = 0; x < len; x++) {
+                        index += sprintf(&hex[index], "%.*X", 2, operandNoForm[x]);
+                    }
+                    int flagBits = 0x20;
+                    int objCodeTA = strtol(hex, NULL, 16);
+
+                    sprintf(objCodeStr, "%02X%01X%05X", objCodeOpCode, flagBits, objCodeTA);
+                    strcpy(objCode, objCodeStr);
+                    printf("\n\nIMMEDIATE ADDR INSTRUCTION OBJCODE: %s\n\n", objCodeStr);
+                    return objCode;
+                }
+            }
+        }
+        return "NULL";
     }
-    return returnFormat;
+    else if (operandFormat == '#') {
+       // copy the string into a temporary buffer
+        char* buff = (char *)calloc(strlen(operandStr), sizeof(char));
+        strcpy(buff, operandStr + 1);
+
+        Instruction* instruction = OPTAB_Search(optab, opcodeStr);
+
+        if ((instruction->format[0]) != 3) {
+            return;
+        }
+        int objCodeOpCode = instruction->opcode + 0x01;
+        int numLength = strcspn(operandStr + 1, "1234567890");
+    }
+    else if (operandFormat == '@') {
+
+    }
+
+    return;
 }
 
 int isDirective(char *possibleDirec) {
@@ -441,6 +503,8 @@ int calcDirective(char* line, char *directive, char *operand, int loc_counter, i
     return returnLoc;
 }
 
+
+
 const char* convertCharConst(char *characterConst) {
     // get the length of the character constant
     int len = strlen(characterConst);
@@ -455,4 +519,43 @@ const char* convertCharConst(char *characterConst) {
     //printf("|%s|\n", hex);
     return hex + 2;
 }
+
+const char* byteConstantObjCode(char* byteDirOperand) {
+
+    char* workingStr = (char *)calloc(strlen(byteDirOperand), sizeof(char));
+    strcpy(workingStr, byteDirOperand);
+
+    char* ptr;
+
+    if (byteDirOperand[0] == 'X') {
+        // process string to get constant
+        ptr = strtok(byteDirOperand, "\'");
+        ptr = strtok(NULL, "\'");
+        printf("result of byteCharConstantObjCode() call: %s\n", ptr);
+        if ((strlen(ptr) % 2) != 0) {
+            return "null";
+        }
+        int x = 0;
+        int index = 2;
+        char hex[80];
+        hex[0] = '0';
+        hex[1] = 'X';
+
+        int len = strlen(ptr);
+        for (; x < len; x++) {
+            index += sprintf(&hex[index], "%.*X", 2, ptr[x]);
+        }
+        return hex;
+    }
+    else if (byteDirOperand[0] == 'C') {
+        // process string to get constant
+        ptr = strtok(byteDirOperand, "\'");
+        ptr = strtok(NULL, "\'");
+        printf("result of byteCharConstantObjCode() call: %s\n", ptr);
+    }
+    return "null";
+}
+
+
+
 #endif

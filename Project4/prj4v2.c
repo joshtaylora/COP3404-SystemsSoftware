@@ -7,12 +7,12 @@
 #define _CRT_SECURE_NO_WARNINGS
 
 #ifdef DEBUG
-#define LOG_LINENUM(x) printf("%d\t", x)
-#define LOG_LABEL(x) printf("%s\t", x)
-#define LOG_OPCODE(x) printf("%s\t", x)
-#define LOG_OPERAND(x) printf("%s\t", x)
+#define LOG_LINENUM(x) printf("%2d\t", x)
+#define LOG_LABEL(x) printf("%-10s\t", x)
+#define LOG_OPCODE(x) printf("%-10s\t", x)
+#define LOG_OPERAND(x) printf("%-10s\n", x)
 #define LOG_ADDRMODE(x) printf("%d\n", x)
-#define LOG_ADDRESS(x) printf("%#08X", x)
+#define LOG_ADDRESS(x) printf("%#08x\t", x)
 #define LOG_SYMTAB(x) ST_print(x)
 #else
 #define LOG_LINENUM(x)
@@ -23,12 +23,19 @@
 #define LOG_ADDRESS(x)
 #define LOG_SYMTAB(x)
 #endif
+
 /*
-void directiveSymbol(int lineNumber, char* symbol, char* directive, char* operand)
-{
-    
-}
+
+typedef union Line {
+    struct InstructionLine* instructionLine;
+    struct DirectiveLine* directiveLine;
+} Line;
+
 */
+
+static char tRecord[100];
+static int tRecordIndex = 0;
+static int tRecordMaxLen = 70;
 
 int main(int argc, char** argv)
 {
@@ -110,6 +117,10 @@ int main(int argc, char** argv)
         // =======================================================================================================
         // ----------------------------------------- Grab the opcode --------------------------------------------- 
         opcodeLength = strcspn(line + lineIndex, wsp);
+        if (opcodeLength == 0) {
+            printf("error getting opcode from line\n");
+            return 1;
+        }
         char* opcode = (char *)calloc(opcodeLength, sizeof(char));
         strncpy(opcode, line + lineIndex, opcodeLength);
 
@@ -120,8 +131,8 @@ int main(int argc, char** argv)
         lineIndex += wspLength;
         // =======================================================================================================
         // -------------------------------------------- Grab the operand -----------------------------------------
-        operandLength = strcspn(line + lineIndex+1, wsp)+1;
-        char* operand = (char *)calloc(operandLength, sizeof(char));
+        operandLength = strcspn(line + lineIndex+1, "\n");
+        char* operand = (char *)calloc(operandLength + 1, sizeof(char));
         strncpy(operand, line + lineIndex, operandLength);
         // =======================================================================================================
 
@@ -296,11 +307,14 @@ int main(int argc, char** argv)
             }
             else {
                 if (isDirective(opcode) == 1) {
+                    // NON-SYMBOL DEF DIRECTIVE LINE
                     if (strcmp(opcode, "BASE") == 0) {
                         int baseVal = locCounter;
                     }
                 }
                 else if (opcode[0] == '+') {
+                    // NON-SYMBOL DEF FORMAT 4 INSTRUCTION LINE
+
                     // get the length of the opcode string minus the + symbol
                     int format4opcodeLen = strlen(opcode) -1;
                     // allocate space for the new string and copy the opcode into it without the + symbol
@@ -319,7 +333,7 @@ int main(int argc, char** argv)
                     }
                     // Increment location counter by 4 bytes
                     newLocCounter += 4;
-
+                    free(format4opcode);
                 }
                 else {
                     Instruction *tableOp = OPTAB_Search(optab, opcode);
@@ -346,8 +360,17 @@ int main(int argc, char** argv)
                 }
             }
         }
-        fprintf(helperFile, "[%d] [%#08x] [%s] [%s] [%s] \n", lineNumber, locCounter, label, opcode, operand);
+        if (strlen(label) > 0) {
+            fprintf(helperFile, "%2d %3s %#08x %3s %-10s %-10s %-s \n", lineNumber, "", locCounter, "", label, opcode, operand);
+        }
+        else if (strlen(operand) > 0) {
+            fprintf(helperFile, "%2d %3s %#08x %3s %-10s %-10s %-s \n", lineNumber, "", locCounter, "", "null", opcode, operand);
+        }
+        else {
 
+            fprintf(helperFile, "%2d %3s %#08x %3s %-10s %-10s %-s \n", lineNumber, "", locCounter, "", "null", opcode, "null");
+
+        }
         // ------------------- Increment the lineNumber counter -------------------
         lineNumber += 1;
         locCounter = newLocCounter;
@@ -363,53 +386,122 @@ int main(int argc, char** argv)
 
 //    ======================================================================================================
 //    -------------------------------------------- Pass 2 --------------------------------------------------
+//    ======================================================================================================
     FILE* pass1;
     pass1 = fopen("intermediate.txt", "r");
 
-    int headerCheck = 0;
+    int headerRecordCheck = 0;
     int endRecordCheck = 0;
 
     char* objFileName = strcat(argv[1], ".obj");
-    char objStr[60];
-    char* objFilePath = objStr;
+    char* objFilePath = (char *)calloc(80, sizeof(char));
+    //char* objFilePath = objStr;
     objFilePath[0] = '.';
     objFilePath[1] = '/';
     strcat(objFilePath, objFileName);
 
     // create obj file
     FILE* objFile;
-    objFile = fopen(objFilePath, "w");
+    objFile = fopen(objFilePath, "w+");
     if (!objFile) {
         printf("ERROR: file \'%s\' could not be created\n", objFileName);
+        return 1;
     }
     // Allocate space for the line
     char* sourceLine = (char *)calloc(1024, sizeof(char));
 
-    char tstart = '[';
-    char tend = ']';
 
 	char* ptr;
+	int p2LocationCounter;
+	int programCounter;
+	int baseCounter;
+    int textRecordLength = 0;
+	char* tRecord = (char *)calloc(70, sizeof(char));
+    tRecord[69] = '\0';
+	int tIndex = 0;
+
     // Loop through each line of the output file
     while (fgets(sourceLine, 1024, pass1) != NULL) {
+        sourceLine[strlen(sourceLine) - 1] = '\0';
         int lineLength = strlen(sourceLine);
         char* workingLine = (char *)calloc(lineLength, sizeof(char));
         strcpy(workingLine, sourceLine);
-    	char lineNum[5], labelStr[10], opcodeStr[10], operandStr[80];
 
-		ptr = strtok(workingLine, "[]"); // removes first [
-		ptr = strtok(workingLine, "[]"); // gets string from after [ to ]
+        int p2LineNum;
+
+    	char* lineNum = (char *)calloc(5, sizeof(char));
+    	char* labelStr = (char *)calloc(10, sizeof(char));
+    	char* locStr = (char *)calloc(10, sizeof(char));
+    	char* opcodeStr = (char *)calloc(10, sizeof(char));
+    	char* operandStr = (char *)calloc(80, sizeof(char));
+        // ------------------------ Grab the line number -------------------------
+		ptr = strtok(workingLine, " ");
 		strcpy(lineNum, ptr);
-		ptr = strtok(workingLine, "[]");
-		ptr = strtok(workingLine, "[]");
-		if (ptr != NULL) {
-			printf("label: %s\n", ptr);
-		}
+        p2LineNum = strtol(lineNum, NULL, 10);
+		LOG_LINENUM(p2LineNum);
+        // ------------------------- Grab the location ----------------------------
+		ptr = strtok(NULL, " ");
+		strcpy(locStr, ptr);
+		p2LocationCounter = (int)strtol(locStr, NULL, 16);
+		LOG_ADDRESS(p2LocationCounter);
+        // --------------------------- Grab the label -----------------------------
+		ptr = strtok(NULL, " ");
+		strcpy(labelStr, ptr);
+		LOG_LABEL(labelStr);
+        // -------------------- Grab the instruction/directive --------------------
+		ptr = strtok(NULL, " ");
+		strcpy(opcodeStr, ptr);
+        LOG_OPCODE(opcodeStr);
+        // --------------------------- Grab the operand ---------------------------
+		ptr = strtok(NULL, "\0");
+		wspLength = strspn(ptr, wsp);
+		strncpy(operandStr, ptr + wspLength, strlen(ptr + wspLength)-1);
+		//printf("\n[%s]\n", operandStr);
+		//printf("OPERANDSTR LENGTH: %d\n", strlen(operandStr));
+        LOG_OPERAND(operandStr);
+
+
+
+
+        if (strcmp(opcodeStr, "START") == 0)
+        {// if the instr/directive in the opcode field is the START directive...
+            if (headerRecordCheck != 0)
+            {
+                errorPrint(sourceLine);
+                printf("Line %d: multiple START directives, attempt to create multiple header records canceled.\n", p2LineNum);
+                return 1;
+            }
+            char* headerRecord = (char *)calloc(71, sizeof(char));
+            // write header record
+            sprintf(headerRecord, "H%-7s%06X%06X", programLabel, startLoc, endLoc-startLoc);
+            printf("H-Record: %s\n", headerRecord);
+            // update the check notifying the assembler that we have made the header record for the program and that we
+            // cannot make another
+            headerRecordCheck = 1;
+        }
+        else if (strcmp(opcodeStr, "END") == 0) {
+            char *endRecord = (char *) calloc(71, sizeof(char));
+            // write end record
+            sprintf(endRecord, "E%06X", firstInstruction);
+            printf("E-Record: %s\n", endRecord);
+        }
+        else
+        { // else, we are dealing with a text record
+            // create a tes to see if we can fit object code into the current text record
+            int testObjCodeLen = 0; // fix later
+            format4ObjCode(optab, symtab, opcodeStr, operandStr);
+//
+//            if (tRecordIndex >= tRecordMaxLen)
+//            { // occurs when we are at the end of a tRecord
+//
+//            }
+        }
+        free(lineNum);
+        free(labelStr);
+        free(opcodeStr);
+        free(operandStr);
+        free(workingLine);
     }
-
-
-    // check for BASE directive to establish Base Relative Addressing
-
-
-    LOG_SYMTAB(symtab);
+    // Terminate program successfully
     return 0;
 }

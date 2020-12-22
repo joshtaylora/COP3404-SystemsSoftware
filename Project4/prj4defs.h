@@ -21,16 +21,18 @@ typedef struct AddrModeTable {
     int** format3;
     int** format4;
 } AddrModeTable;
-struct Line {
+typedef struct InstructionLine {
+    char* lineType;
     int lineNumber;
     int location;
-    char* sourceLine;
     char* label;
-    char* opcode;
+    char* directive;
+    Instruction* instruction;
     char* operand;
-};
-typedef struct Line DirectiveLine;
-typedef struct Line InstructionLine;
+    char* objCode;
+    struct Line* next;
+} InstructionLine;
+
 AddrModeTable* AMT_create(void);
 Instruction* Instruction_Alloc(char* opName, int opHex, int* formats);
 OpcodeTable* OPTAB_create(void);
@@ -38,12 +40,14 @@ Instruction* OPTAB_Search(OpcodeTable* instructionTable, char* searchName);
 SymbolTable *ST_create( void );
 Symbol *Symbol_alloc(  char *name, int address, int sourceline );
 void ST_set( SymbolTable *hashtable, char *name, int address, int sourceline);
-Symbol *ST_get(SymbolTable *hashtable, char *name);
+Symbol *ST_get(SymbolTable *hashtable, const char *name);
 void ST_print( SymbolTable *hashtable );
 void errorPrint(char* line);
-int getInstructionFormat(Instruction* opcode, char* operand);
+const char* format4ObjCode(OpcodeTable* optab, SymbolTable* symtab, char* opcodeStr, char* operandStr);
+const char* getObjCode(OpcodeTable* optab, Symbol* symbol, char* opcodeStr, char* operandStr);
 int isDirective(char *possibleDirec);
 int opcodeCalc(char *opcode);
 int calcByte(char* line, char* operand, int loc_counter, int lineNumber);
+const char* byteConstantObjCode(char* byteDirOperand);
 int calcDirective(char* line, char *directive, char *operand, int loc_counter, int lineNumber);
 const char* convertCharConst(char *optab);

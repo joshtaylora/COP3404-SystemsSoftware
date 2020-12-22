@@ -307,7 +307,7 @@ int main(int argc, char *argv[]) {
             else if (strcmp(opcode, "END") == 0 && endCheck > 0)
             {
                 errorPrint(line);
-                printf("Line %d: multiple END directives encounterd\n", lineNumber);
+                printf("Line %d: multiple END directives encountered\n", lineNumber);
                 return 1;
             }
             // increment index past opcode

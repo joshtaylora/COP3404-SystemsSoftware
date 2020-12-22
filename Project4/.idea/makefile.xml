@@ -11,9 +11,27 @@
           </build-configuration>
         </build-configurations>
       </build-target>
+      <build-target name="mac">
+        <build-configurations>
+          <build-configuration toolchainName="Mac">
+            <make-targets>
+              <make-target>mac</make-target>
+            </make-targets>
+          </build-configuration>
+        </build-configurations>
+      </build-target>
       <build-target name="clean">
         <build-configurations>
           <build-configuration toolchainName="WSL">
+            <make-targets>
+              <make-target>clean</make-target>
+            </make-targets>
+          </build-configuration>
+        </build-configurations>
+      </build-target>
+      <build-target name="clean">
+        <build-configurations>
+          <build-configuration toolchainName="Mac">
             <make-targets>
               <make-target>clean</make-target>
             </make-targets>

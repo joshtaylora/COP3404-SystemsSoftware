@@ -11,5 +11,15 @@
         </clean>
       </configuration>
     </target>
+    <target id="d410e9ab-1155-4000-bc3f-cabc626b8715" name="MacProject4Debug" defaultType="MAKE">
+      <configuration id="4a8e365d-1d2b-422d-8d7d-46d2cc023c42" name="MacProject4Debug" toolchainName="Mac">
+        <build type="MAKE">
+          <make targetName="mac" />
+        </build>
+        <clean type="MAKE">
+          <make targetName="clean" />
+        </clean>
+      </configuration>
+    </target>
   </component>
 </project>
