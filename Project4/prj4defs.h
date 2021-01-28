@@ -21,18 +21,23 @@ typedef struct AddrModeTable {
     int** format3;
     int** format4;
 } AddrModeTable;
-typedef struct InstructionLine {
-    char* lineType;
+typedef struct Line {
+    char lineType;
     int lineNumber;
     int location;
     char* label;
-    char* directive;
-    Instruction* instruction;
+    union {
+        char* directive;
+        Instruction* instruction;
+    };
     char* operand;
     char* objCode;
     struct Line* next;
-} InstructionLine;
+}Line;
 
+Line* initLineLinkedList(int lineNum, int loc, char* programLabel);
+Line* addDirectiveToLL(int lineNum, int loc, char* label, char* directive, char* operand);
+Line* addInstructionToLL(int lineNum, int loc, char* label, Instruction* instruction, char* operand);
 AddrModeTable* AMT_create(void);
 Instruction* Instruction_Alloc(char* opName, int opHex, int* formats);
 OpcodeTable* OPTAB_create(void);
@@ -43,8 +48,10 @@ void ST_set( SymbolTable *hashtable, char *name, int address, int sourceline);
 Symbol *ST_get(SymbolTable *hashtable, const char *name);
 void ST_print( SymbolTable *hashtable );
 void errorPrint(char* line);
-const char* format4ObjCode(OpcodeTable* optab, SymbolTable* symtab, char* opcodeStr, char* operandStr);
-const char* getObjCode(OpcodeTable* optab, Symbol* symbol, char* opcodeStr, char* operandStr);
+const char* indirectFormatObjCode(OpcodeTable* optab, SymbolTable* symtab, char* opcodeStr, char* operandStr);
+const char* immediateFormatObjCode(OpcodeTable* optab, SymbolTable* symtab, char* opcodeStr, char* operandStr);
+const char* simpleFormatObjCode(OpcodeTable* optab, SymbolTable* symtab, char* opcodeStr, char* operandStr);
+const char* getObjCode(OpcodeTable* optab, SymbolTable* symtab, char* opcodeStr, char* operandStr);
 int isDirective(char *possibleDirec);
 int opcodeCalc(char *opcode);
 int calcByte(char* line, char* operand, int loc_counter, int lineNumber);

@@ -37,6 +37,10 @@ static char tRecord[100];
 static int tRecordIndex = 0;
 static int tRecordMaxLen = 70;
 
+Line* lineHead = NULL;
+Line* prevLine = NULL;
+Line* currentLine = NULL;
+
 int main(int argc, char** argv)
 {
     // Used to check that the user has provided a SIC/XE file 
@@ -92,6 +96,8 @@ int main(int argc, char** argv)
     const char* alpha = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
     const char* comment = "#";
     const char* hex = "0123456789ABCDEF";
+
+
     /*
      * Begin parsing the lines in the file
      * fgets returns null when there are no more lines in the file
@@ -106,17 +112,17 @@ int main(int argc, char** argv)
         }
         // =======================================================================================================
         // --------------------------------------- Grab the label ------------------------------------------------
-        labelLength = strcspn(line, wsp);
+        labelLength = (int)strcspn(line, wsp);
         char* label = (char *)calloc(labelLength, sizeof(char));
         strncpy(label, line + lineIndex, labelLength);
         lineIndex += labelLength;
         // =======================================================================================================
         // ---------------------------------------- Skip whitespace ----------------------------------------------
-        wspLength = strspn(line + lineIndex, wsp);
+        wspLength = (int)strspn(line + lineIndex, wsp);
         lineIndex += wspLength;
         // =======================================================================================================
         // ----------------------------------------- Grab the opcode --------------------------------------------- 
-        opcodeLength = strcspn(line + lineIndex, wsp);
+        opcodeLength = (int)strcspn(line + lineIndex, wsp);
         if (opcodeLength == 0) {
             printf("error getting opcode from line\n");
             return 1;
@@ -127,11 +133,11 @@ int main(int argc, char** argv)
         lineIndex += opcodeLength;
         // =======================================================================================================
         // ------------------------------------------- Skip whitespace -------------------------------------------
-        wspLength = strspn(line + lineIndex, wsp);
+        wspLength = (int)strspn(line + lineIndex, wsp);
         lineIndex += wspLength;
         // =======================================================================================================
         // -------------------------------------------- Grab the operand -----------------------------------------
-        operandLength = strcspn(line + lineIndex+1, "\n");
+        operandLength = (int)strcspn(line + lineIndex+1, "\n");
         char* operand = (char *)calloc(operandLength + 1, sizeof(char));
         strncpy(operand, line + lineIndex, operandLength);
         // =======================================================================================================
@@ -149,6 +155,7 @@ int main(int argc, char** argv)
         // Check to ensure that the START directive occurs before all other instructions/directives
         if (startCheck == 0) {
             int startDirCheck = strcmp(opcode, "START");
+            // if the start directive is not the first directive / instruction in the program this will be true
             if (startDirCheck != 0) {
                 // throw an error and terminate execution
                 errorPrint(line);
@@ -178,6 +185,8 @@ int main(int argc, char** argv)
             }
             ST_set(symtab, label, locCounter, lineNumber);
             startLoc = locCounter;
+            lineHead = initLineLinkedList(startLine, startLoc, programLabel);
+            currentLine = lineHead;
         }
         else {
             if (strcmp(opcode, "START") == 0) {
@@ -235,6 +244,15 @@ int main(int argc, char** argv)
                     }
                     // add the symbol to the symbol table
                     ST_set(symtab, label, locCounter, lineNumber);
+                    currentLine->next = addDirectiveToLL(lineNumber, locCounter, label, opcode, operand);
+
+                    printf("\nLine\nlabel: %s\ndirective: %s\noperand: %s\n",
+                           currentLine->label,
+                           currentLine->directive,
+                           currentLine->operand);
+                    // Set the previous line to the current line for the next line to use
+                    prevLine = currentLine;
+                    currentLine = currentLine->next;
                     // increment the location counter
                     newLocCounter = calcDirective(line, opcode, operand, locCounter, lineNumber);
                 }
@@ -245,7 +263,7 @@ int main(int argc, char** argv)
                     // ===================================================================================================
                     if (opcode[0] == '+') {
                         // get the length of the opcode string minus the + symbol
-                        int format4opcodeLen = strlen(opcode) -1;
+                        int format4opcodeLen = (int)strlen(opcode) -1;
                         // allocate space for the new string and copy the opcode into it without the + symbol
                         char *format4opcode = (char *) calloc(format4opcodeLen, sizeof(char));
                         strncpy(format4opcode, opcode + 1, format4opcodeLen);
@@ -268,6 +286,8 @@ int main(int argc, char** argv)
                             firstInstruction = locCounter;
                         }
                         ST_set(symtab, label, locCounter, lineNumber);
+                        currentLine->next = addInstructionToLL(lineNumber, locCounter, label, optabInstr, operand);
+                        currentLine = currentLine->next;
                         // Increment location counter by 4 bytes
                         newLocCounter += 4;
 
@@ -301,11 +321,16 @@ int main(int argc, char** argv)
                                    lineNumber, label, duplicate->SourceLineNumber);
                             return 1;
                         }
+                        currentLine->next = addInstructionToLL(lineNumber, locCounter, label, tableOp, operand);
+                        prevLine = currentLine;
+                        currentLine = currentLine->next;
+
                         ST_set(symtab, label, locCounter, lineNumber);
                     }
                 }
             }
-            else {
+            else
+            { // case occurs when the line is not a symbol definition
                 if (isDirective(opcode) == 1) {
                     // NON-SYMBOL DEF DIRECTIVE LINE
                     if (strcmp(opcode, "BASE") == 0) {
@@ -489,7 +514,7 @@ int main(int argc, char** argv)
         { // else, we are dealing with a text record
             // create a tes to see if we can fit object code into the current text record
             int testObjCodeLen = 0; // fix later
-            format4ObjCode(optab, symtab, opcodeStr, operandStr);
+            // getObjCode(optab, symtab, opcodeStr, operandStr);
 //
 //            if (tRecordIndex >= tRecordMaxLen)
 //            { // occurs when we are at the end of a tRecord

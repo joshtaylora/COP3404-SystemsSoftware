@@ -8,13 +8,74 @@
 #define SYMTAB_SIZE 26
 #define OPTAB_SIZE 59
 
+Line* initLineLinkedList(int lineNum, int loc, char* programLabel)
+{ // used to initialize the first line in the line linked list for the initial START directive
+    /*
+     * line types:
+     * D = Directive
+     * I = Instruction
+     */
+    char startDirective[]= "START";
+
+    Line* startLine = (Line *)calloc(1, sizeof(Line));
+
+    startLine->lineType = 'D';
+    startLine->lineNumber = lineNum;
+    startLine->location = loc;
+
+    startLine->label = (char *)calloc(strlen(programLabel), sizeof(char));
+    strcpy(startLine->label, programLabel);
+
+    startLine->directive = (char *)calloc(strlen("START")  + 1, sizeof(char));
+    strcpy(startLine->directive, startDirective);
+
+    startLine->operand = NULL;
+    startLine->objCode = NULL;
+    startLine->next = NULL;
+    return startLine;
+}
+
+Line* addDirectiveToLL(int lineNum, int loc, char* label, char* directive, char* operand)
+{
+    Line* entry = (Line *)calloc(1, sizeof(Line));
+    entry->lineType = 'D';
+    entry->lineNumber = lineNum;
+    entry->location = loc;
+    entry->label = (char *)calloc(strlen(label), sizeof(char));
+    entry->directive = (char *)calloc(strlen(directive), sizeof(char));
+    entry->operand = (char *)calloc(strlen(operand), sizeof(char));
+    // set the next entry to NULL
+    entry->next = NULL;
+    // copy all of the string elements to their respective fields in the line
+    strcpy(entry->label, label);
+    strcpy(entry->directive, directive);
+    strcpy(entry->operand, operand);
+    return entry;
+}
+
+Line* addInstructionToLL(int lineNum, int loc, char* label, Instruction* instruction, char* operand)
+{
+    Line* entry = (Line *)calloc(1, sizeof(Line));
+    entry->lineType = 'I';
+    entry->lineNumber = lineNum;
+    entry->location = loc;
+    entry->label = (char *)calloc(strlen(label), sizeof(char));
+    entry->instruction = instruction;
+    entry->operand = (char *)calloc(strlen(operand), sizeof(char));
+    // set the next entry to NULL
+    entry->next = NULL;
+    // copy all of the string elements to their respective fields in the line
+    strcpy(entry->label, label);
+    strcpy(entry->operand, operand);
+    return entry;
+}
 
 Instruction* Instruction_Alloc(char* opName, int opHex, int* formats)
 {
     // allocate memory for the instruction we are initializing
     Instruction* opcode = malloc(sizeof(Instruction) * 1);
     // compute the length of the string name passed in
-    int len = strlen(opName);
+    int len = (int)strlen(opName);
     // allocate memory for the opcode name
     opcode->mnemonic = (char *)calloc(len + 1, sizeof(char));
     // copy the opcode mnemonic to the Instruction's mnemonic field
@@ -43,48 +104,48 @@ OpcodeTable* OPTAB_create(void)
     form3and4[1] = 4;
 
 
-    OPTAB->Instructions[0] = Instruction_Alloc("ADD", 0x18, form3and4);
-    OPTAB->Instructions[1] = Instruction_Alloc("AND", 0x40, form3and4);
-    OPTAB->Instructions[2] = Instruction_Alloc("COMP", 0x28, form3and4);
-    OPTAB->Instructions[3] = Instruction_Alloc("DIV", 0x24, form3and4);
-    OPTAB->Instructions[4] = Instruction_Alloc("J", 0x3C, form3and4);
-    OPTAB->Instructions[5] = Instruction_Alloc("JEQ", 0x30, form3and4);
-    OPTAB->Instructions[6] = Instruction_Alloc("JGT", 0x34, form3and4);
-    OPTAB->Instructions[7] = Instruction_Alloc("JLT", 0x38, form3and4);
-    OPTAB->Instructions[8] = Instruction_Alloc("JSUB", 0x48, form3and4);
-    OPTAB->Instructions[9] = Instruction_Alloc("LDA", 0x00, form3and4);
-    OPTAB->Instructions[10] = Instruction_Alloc("LDCH", 0x50, form3and4);
-    OPTAB->Instructions[11] = Instruction_Alloc("LDL", 0x08, form3and4);
-    OPTAB->Instructions[12] = Instruction_Alloc("LDX", 0x04, form3and4);
-    OPTAB->Instructions[13] = Instruction_Alloc("MUL", 0x20, form3and4);
-    OPTAB->Instructions[14] = Instruction_Alloc("OR", 0x44, form3and4);
-    OPTAB->Instructions[15] = Instruction_Alloc("RD", 0xD8, form3and4);
-    OPTAB->Instructions[16] = Instruction_Alloc("RSUB", 0x4C, form3and4);
-    OPTAB->Instructions[17] = Instruction_Alloc("STA", 0x0C, form3and4);
-    OPTAB->Instructions[18] = Instruction_Alloc("STCH", 0x54, form3and4);
-    OPTAB->Instructions[19] = Instruction_Alloc("STL", 0x14, form3and4);
-    OPTAB->Instructions[20] = Instruction_Alloc("STSW", 0xE8, form3and4);
-    OPTAB->Instructions[21] = Instruction_Alloc("STX", 0x10, form3and4);
-    OPTAB->Instructions[22] = Instruction_Alloc("SUB", 0x1C, form3and4);
-    OPTAB->Instructions[23] = Instruction_Alloc("TD", 0xE0, form3and4);
-    OPTAB->Instructions[24] = Instruction_Alloc("TIX", 0x2C, form3and4);
-    OPTAB->Instructions[25] = Instruction_Alloc("WD", 0xDC, form3and4);
+    OPTAB->Instructions[0] = Instruction_Alloc( "ADD",  0x18,   form3and4);
+    OPTAB->Instructions[1] = Instruction_Alloc( "AND",  0x40,   form3and4);
+    OPTAB->Instructions[2] = Instruction_Alloc( "COMP", 0x28,   form3and4);
+    OPTAB->Instructions[3] = Instruction_Alloc( "DIV",  0x24,   form3and4);
+    OPTAB->Instructions[4] = Instruction_Alloc( "J",    0x3C,   form3and4);
+    OPTAB->Instructions[5] = Instruction_Alloc( "JEQ",  0x30,   form3and4);
+    OPTAB->Instructions[6] = Instruction_Alloc( "JGT",  0x34,   form3and4);
+    OPTAB->Instructions[7] = Instruction_Alloc( "JLT",  0x38,   form3and4);
+    OPTAB->Instructions[8] = Instruction_Alloc( "JSUB", 0x48,   form3and4);
+    OPTAB->Instructions[9] = Instruction_Alloc( "LDA",  0x00,   form3and4);
+    OPTAB->Instructions[10] = Instruction_Alloc("LDCH", 0x50,   form3and4);
+    OPTAB->Instructions[11] = Instruction_Alloc("LDL",  0x08,   form3and4);
+    OPTAB->Instructions[12] = Instruction_Alloc("LDX",  0x04,   form3and4);
+    OPTAB->Instructions[13] = Instruction_Alloc("MUL",  0x20,   form3and4);
+    OPTAB->Instructions[14] = Instruction_Alloc("OR",   0x44,   form3and4);
+    OPTAB->Instructions[15] = Instruction_Alloc("RD",   0xD8,   form3and4);
+    OPTAB->Instructions[16] = Instruction_Alloc("RSUB", 0x4C,   form3and4);
+    OPTAB->Instructions[17] = Instruction_Alloc("STA",  0x0C,   form3and4);
+    OPTAB->Instructions[18] = Instruction_Alloc("STCH", 0x54,   form3and4);
+    OPTAB->Instructions[19] = Instruction_Alloc("STL",  0x14,   form3and4);
+    OPTAB->Instructions[20] = Instruction_Alloc("STSW", 0xE8,   form3and4);
+    OPTAB->Instructions[21] = Instruction_Alloc("STX",  0x10,   form3and4);
+    OPTAB->Instructions[22] = Instruction_Alloc("SUB",  0x1C,   form3and4);
+    OPTAB->Instructions[23] = Instruction_Alloc("TD",   0xE0,   form3and4);
+    OPTAB->Instructions[24] = Instruction_Alloc("TIX",  0x2C,   form3and4);
+    OPTAB->Instructions[25] = Instruction_Alloc("WD",   0xDC,   form3and4);
     // SICXE Instructions
-    OPTAB->Instructions[26] = Instruction_Alloc("ADDF", 0x58, form3and4);
-    OPTAB->Instructions[27] = Instruction_Alloc("ADDR", 0x90, form2);
-    OPTAB->Instructions[28] = Instruction_Alloc("CLEAR", 0xB4, form2);
-    OPTAB->Instructions[29] = Instruction_Alloc("COMPF", 0x88, form3and4);
-    OPTAB->Instructions[30] = Instruction_Alloc("COMPR", 0xA0, form2);
-    OPTAB->Instructions[31] = Instruction_Alloc("DIVF", 0x64, form3and4);
-    OPTAB->Instructions[32] = Instruction_Alloc("DIVR", 0x9C, form2);
-    OPTAB->Instructions[33] = Instruction_Alloc("FIX", 0xC4, form1);
-    OPTAB->Instructions[34] = Instruction_Alloc("FLOAT", 0xC0, form1);
-    OPTAB->Instructions[35] = Instruction_Alloc("HIO", 0xF4, form1);
-    OPTAB->Instructions[36] = Instruction_Alloc("LDB", 0x68, form3and4);
-    OPTAB->Instructions[37] = Instruction_Alloc("LDF", 0x70, form3and4);
-    OPTAB->Instructions[38] = Instruction_Alloc("LDS", 0x6C, form3and4);
-    OPTAB->Instructions[39] = Instruction_Alloc("LDT", 0x74, form3and4);
-    OPTAB->Instructions[40] = Instruction_Alloc("LPS", 0xD0, form3and4);
+    OPTAB->Instructions[26] = Instruction_Alloc("ADDF",     0x58,   form3and4);
+    OPTAB->Instructions[27] = Instruction_Alloc("ADDR",     0x90,   form2);
+    OPTAB->Instructions[28] = Instruction_Alloc("CLEAR",    0xB4,  form2);
+    OPTAB->Instructions[29] = Instruction_Alloc("COMPF",    0x88,  form3and4);
+    OPTAB->Instructions[30] = Instruction_Alloc("COMPR",    0xA0,  form2);
+    OPTAB->Instructions[31] = Instruction_Alloc("DIVF",     0x64,   form3and4);
+    OPTAB->Instructions[32] = Instruction_Alloc("DIVR",     0x9C, form2);
+    OPTAB->Instructions[33] = Instruction_Alloc("FIX",      0xC4, form1);
+    OPTAB->Instructions[34] = Instruction_Alloc("FLOAT",    0xC0, form1);
+    OPTAB->Instructions[35] = Instruction_Alloc("HIO",      0xF4, form1);
+    OPTAB->Instructions[36] = Instruction_Alloc("LDB",      0x68, form3and4);
+    OPTAB->Instructions[37] = Instruction_Alloc("LDF",      0x70, form3and4);
+    OPTAB->Instructions[38] = Instruction_Alloc("LDS",      0x6C, form3and4);
+    OPTAB->Instructions[39] = Instruction_Alloc("LDT",      0x74, form3and4);
+    OPTAB->Instructions[40] = Instruction_Alloc("LPS",      0xD0, form3and4);
     OPTAB->Instructions[41] = Instruction_Alloc("MULF", 0x60, form3and4);
     OPTAB->Instructions[42] = Instruction_Alloc("MULR", 0x98, form2);
     OPTAB->Instructions[43] = Instruction_Alloc("NORM", 0xC8, form1);
@@ -275,116 +336,47 @@ void DocumentError(int errorCode, char* line, int lineNumber, char* label, char*
 
 }
 
-const char* format4ObjCode(OpcodeTable* optab, SymbolTable* symtab, char* opcodeStr, char* operandStr)
-{
-    // create buffer to store the opcode without the format 4 indicator, '+'
-    char* opcode = (char *)calloc(strlen(opcodeStr), sizeof(char));
-    strcpy(opcode, opcodeStr+1);
-    printf("Inside of format4ObjCode, opcode: %s\n", opcode);
-    return opcode;
-}
+//const char* parseOpcodeStr(char* opcodeStr)
+//{ // used to parse the opcode char array to remove format 4
+//
+//}
 
-const char* getObjCode(OpcodeTable* optab, Symbol* symbol, char* opcodeStr, char* operandStr) {
-    int constFormFlagBits = 0x00;
-    int pcRelativeFlagBits = 0x20;
-    int baseRelativeFlagBits = 0x40;
-    int constFormIndexFlagBits = 0x80;
-    int extendedFormIndexFlagBits = 0x90;
-    int pcRelativeIndexFlagBits = 0xA0;
-    int baseRelativeIndexFlagBits = 0xC0;
-    int sicIndexFlagBits = 0x8;
+//const char* indirectFormatObjCode(OpcodeTable* optab, SymbolTable* symtab, char* opcodeStr, char* operandStr)
+//{ // indirect format instruction handling
+//    char format4Char = opcodeStr[0];
+//    if (format4Char == '+')
+//    { // format 4 instructions are indicated by a plus sign prepended to an instruction mnemonic
+//
+//    }
+//}
 
-    char opcodeFormat = opcodeStr[0];
-    char operandFormat = operandStr[0];
+//const char* immediateFormatObjCode(OpcodeTable* optab, SymbolTable* symtab, char* opcodeStr, char* operandStr)
+//{
+//
+//}
 
-    const char* hexPattern = "1234567890ABCDEF";
-    int opcodeStrLen = strlen(opcodeStr);
-    int operandStrLen = strlen(operandStr);
-    char* objCode = (char *)calloc(50, sizeof(char));
-    if (opcodeFormat == '+') {
-         /* Format 4 instruction */
-        // copy the string into a temporary buffer
-        char* buff = (char *)calloc(strlen(opcodeStr), sizeof(char));
-        strcpy(buff, opcodeStr + 1);
-        // free the opcodeStr so we can redefine it to the proper opcode string
-        // allocate memory for the new string
+//const char* simpleFormatObjCode(OpcodeTable* optab, SymbolTable* symtab, char* opcodeStr, char* operandStr)
+//{
+//    // create buffer to store the opcode without the format 4 indicator, '+'
+//    char* opcode = (char *)calloc(strlen(opcodeStr), sizeof(char));
+//    strcpy(opcode, opcodeStr+1);
+//    printf("Inside of format4ObjCode, opcode: %s\n", opcode);
+//    return opcode;
+//}
 
-        // grab the instruction
-        Instruction* instruction = OPTAB_Search(optab, opcodeStr + 1);
-
-        if ((instruction->format[1]) != 4) {
-            // instruction does not support format 4
-            return "null";
-        }
-        else {
-            if (operandStr[0] == '#') {
-                // copy the operand to a new string without the '#' character
-                char* operandNoForm = (char *)calloc(strlen(operandStr), sizeof(char));
-                strcpy(operandNoForm, operandStr+ 1);
-
-                // immediate addressing
-                int objCodeOpCode = instruction->opcode + 0x01;
-                int numLength = strcspn(operandStr, "1234567890");
-
-                if (numLength > 0) {
-                    // reserve the string that we will be returning
-                    char* objCodeStr = (char *)calloc(50, sizeof(char));
-
-                    int objCodeTA = symbol->Address;
-
-                    int flagBits  = 0x20;
-                    sprintf(objCodeStr, "%02X%01X%05X", objCodeOpCode, flagBits, objCodeTA);
-                    for (int i = 0; i < strlen(objCodeStr); i++) {
-                        objCode[i] = objCodeStr[i];
-                    }
-                    //strcpy(objCodeReturn, objCodeStr);
-                    printf("\n\nIMMEDIATE ADDR INSTRUCTION OBJCODE: %s\n\n", objCodeStr);
-                    return objCode;
-                }
-                else {
-
-                    char* objCodeStr = (char *)calloc(strlen(operandNoForm) * 2, sizeof(char));
-
-                    int len = strlen(operandNoForm);
-                    char* hex = (char *)calloc(1 + len * 2, sizeof(char));
-                    hex[0] = '0';
-                    hex[1] = 'x';
-                    int index = 2;
-                    int x;
-                    for (x = 0; x < len; x++) {
-                        index += sprintf(&hex[index], "%.*X", 2, operandNoForm[x]);
-                    }
-                    int flagBits = 0x20;
-                    int objCodeTA = strtol(hex, NULL, 16);
-
-                    sprintf(objCodeStr, "%02X%01X%05X", objCodeOpCode, flagBits, objCodeTA);
-                    strcpy(objCode, objCodeStr);
-                    printf("\n\nIMMEDIATE ADDR INSTRUCTION OBJCODE: %s\n\n", objCodeStr);
-                    return objCode;
-                }
-            }
-        }
-        return "NULL";
-    }
-    else if (operandFormat == '#') {
-       // copy the string into a temporary buffer
-        char* buff = (char *)calloc(strlen(operandStr), sizeof(char));
-        strcpy(buff, operandStr + 1);
-
-        Instruction* instruction = OPTAB_Search(optab, opcodeStr);
-
-        if ((instruction->format[0]) != 3) {
-            return;
-        }
-        int objCodeOpCode = instruction->opcode + 0x01;
-        int numLength = strcspn(operandStr + 1, "1234567890");
-    }
-    else if (operandFormat == '@') {
-
-    }
-
-    return;
-}
+//const char* getObjCode(OpcodeTable* optab, SymbolTable* symtab, char* opcodeStr, char* operandStr)
+//{
+//    char operandFormat = operandStr[0];
+//    switch(operandFormat)
+//    {
+//        case('@'):
+//            return indirectFormatObjCode(optab, symtab, opcodeStr, operandStr);
+//        case('#'):
+//            return immediateFormatObjCode(optab, symtab, opcodeStr, operandStr);
+//        default:
+//            return simpleFormatObjCode(optab, symtab, opcodeStr, operandStr);
+//    }
+//}
 
 int isDirective(char *possibleDirec) {
     // START - specifies the name and starting address of program, routine, or library
@@ -545,7 +537,8 @@ const char* byteConstantObjCode(char* byteDirOperand) {
         for (; x < len; x++) {
             index += sprintf(&hex[index], "%.*X", 2, ptr[x]);
         }
-        return hex;
+        const char* returnVal = hex;
+        return returnVal;
     }
     else if (byteDirOperand[0] == 'C') {
         // process string to get constant
